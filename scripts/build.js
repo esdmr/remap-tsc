@@ -59,7 +59,7 @@ let tscResult;
 
 if (shouldRunTsc) {
 	/** @type {string[]} */
-	const options = ['tsc', '-b', '--preserveWatchOutput'];
+	const options = ['exec', 'tsc', '-b', '--preserveWatchOutput'];
 
 	if (shouldWatch) {
 		options.push('-w');
@@ -67,6 +67,7 @@ if (shouldRunTsc) {
 
 	tscResult = execa('pnpm', options, {
 		cwd: resolvePath('..'),
+		stdio: 'inherit',
 	});
 
 	if (!shouldWatch) {
