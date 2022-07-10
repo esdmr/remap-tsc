@@ -4,7 +4,8 @@
   "compilerOptions": {
     "composite": true,
     "outDir": "../build",
-    "rootDir": "."
+    "rootDir": ".",
+    "emitDeclarationOnly": true
   },
   "include": ["**/*"]
 }

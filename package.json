@@ -8,16 +8,20 @@
   "license": "MIT",
   "author": "Saeed M Rad <esdmr0@gmail.com> (https://github.com/esdmr)",
   "type": "module",
-  "exports": "./build/index.js",
-  "main": "build/index.js",
+  "exports": {
+    "types": "./build/index.d.ts",
+    "require": "./build/index.cjs",
+    "import": "./build/index.js"
+  },
+  "main": "build/index.cjs",
   "types": "build/index.d.ts",
   "files": [
     "build/index.js",
+    "build/index.cjs",
     "build/index.d.ts"
   ],
   "scripts": {
-    "build": "tsc -b",
-    "build:examples": "pnpm link . && tsc -b examples",
+    "build": "node scripts/build.js --tsc",
     "changeset": "changeset",
     "changeset:version": "changeset version",
     "clean": "rimraf build .nyc_output coverage",
@@ -29,7 +33,7 @@
     "test:coverage": "c8 tap",
     "test:coverage-html": "c8 report -r html",
     "test:coverage-lcov": "c8 report -r lcov",
-    "watch": "tsc -b -w"
+    "watch": "node scripts/build.js --tsc --watch"
   },
   "devDependencies": {
     "@changesets/cli": "2.23.1",
@@ -38,6 +42,8 @@
     "@types/semver": "7.3.10",
     "@types/tap": "15.0.7",
     "c8": "7.11.3",
+    "esbuild": "0.14.48",
+    "esbuild-node-externals": "1.4.1",
     "execa": "6.1.0",
     "mock-fs": "5.1.2",
     "rimraf": "3.0.2",
