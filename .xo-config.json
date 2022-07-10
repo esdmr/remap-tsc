@@ -69,6 +69,13 @@
       "rules": {
         "unicorn/prefer-module": "off"
       }
+    },
+    {
+      "files": "test/*.ts",
+      "rules": {
+        "unicorn/filename-case": "off",
+        "@typescript-eslint/naming-convention": "off"
+      }
     }
   ]
 }
