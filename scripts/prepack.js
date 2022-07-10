@@ -42,7 +42,9 @@ console.log('pnpm run test');
 await execaCommand('pnpm run test', options);
 
 const packageJson = await fs.readFile('package.json', 'utf8');
-const newPackageJson = JSON.stringify(processPackageJson(JSON.parse(packageJson)));
+const newPackageJson = JSON.stringify(
+	processPackageJson(JSON.parse(packageJson)),
+);
 
 try {
 	console.log('mv package.json …');

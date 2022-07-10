@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import process from 'node:process';
-import {build} from 'esbuild';
 import { fileURLToPath } from 'node:url';
-import {nodeExternalsPlugin} from 'esbuild-node-externals';
-import {execa} from 'execa';
+import { build } from 'esbuild';
+import { nodeExternalsPlugin } from 'esbuild-node-externals';
+import { execa } from 'execa';
 
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
 	console.log(`\
@@ -18,7 +18,8 @@ Environment variables:
 NODE_ENV=production  Equivalent to --production`);
 }
 
-const isProduction = process.env.NODE_ENV === 'production'
+const isProduction
+	= process.env.NODE_ENV === 'production'
 	|| process.argv.includes('--production');
 
 const shouldWatch = process.argv.includes('--watch');
@@ -32,9 +33,7 @@ const buildOptions = {
 	watch: shouldWatch,
 	minify: isProduction,
 	sourcemap: !isProduction,
-	plugins: [
-		nodeExternalsPlugin(),
-	],
+	plugins: [nodeExternalsPlugin()],
 };
 
 if (isProduction) {

@@ -18,8 +18,8 @@ jobs:
     strategy:
       matrix:
         node:
-          - '14'
-          - '16'
+          - "14"
+          - "16"
     runs-on: ubuntu-latest
 
     steps:

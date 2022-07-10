@@ -106,7 +106,10 @@ export class ResolutionData {
 
 		if (configFile.error) {
 			throw new ResolutionError(
-				ts.formatDiagnostics([configFile.error], this._host.formatDiagnostics),
+				ts.formatDiagnostics(
+					[configFile.error],
+					this._host.formatDiagnostics,
+				),
 			);
 		}
 
@@ -120,7 +123,10 @@ export class ResolutionData {
 
 		if (commandLine.errors.length > 0) {
 			throw new ResolutionError(
-				ts.formatDiagnostics(commandLine.errors, this._host.formatDiagnostics),
+				ts.formatDiagnostics(
+					commandLine.errors,
+					this._host.formatDiagnostics,
+				),
 			);
 		}
 
@@ -153,7 +159,8 @@ export class ResolutionData {
 	}
 
 	private validateCommandLine (commandLine: ts.ParsedCommandLine) {
-		const { noEmit, emitDeclarationOnly, outFile, out } = commandLine.options;
+		const { noEmit, emitDeclarationOnly, outFile, out }
+			= commandLine.options;
 
 		if (noEmit || emitDeclarationOnly) {
 			throw new ResolutionError('Cannot map files when emit is disabled');
@@ -177,7 +184,9 @@ export class ResolutionData {
 		const sourceFile = new SourceFile(outputs);
 
 		if (this._outputFiles.has(sourceFile.outputFile)) {
-			throw new ResolutionError('Multiple sources emit to the same output file');
+			throw new ResolutionError(
+				'Multiple sources emit to the same output file',
+			);
 		}
 
 		this._sourceFiles.set(input, sourceFile);

@@ -1,15 +1,10 @@
 {
-  "env": [
-    "es6"
-  ],
+  "env": ["es6"],
   "parserOptions": {
     "ecmaVersion": 2022
   },
   "rules": {
-    "arrow-parens": [
-      "error",
-      "always"
-    ],
+    "arrow-parens": ["error", "always"],
     "no-await-in-loop": "off",
     "object-property-newline": "error",
     "object-curly-newline": [
@@ -29,20 +24,10 @@
         }
       }
     ],
-    "object-curly-spacing": [
-      "error",
-      "always"
-    ],
-    "space-before-function-paren": [
-      "error",
-      "always"
-    ],
-    "unicorn/prefer-json-parse-buffer": [
-      "off"
-    ],
-    "import/extensions": [
-      "off"
-    ]
+    "object-curly-spacing": ["error", "always"],
+    "space-before-function-paren": ["error", "always"],
+    "unicorn/prefer-json-parse-buffer": ["off"],
+    "import/extensions": ["off"]
   },
   "overrides": [
     {

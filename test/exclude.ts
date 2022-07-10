@@ -17,13 +17,7 @@ await runTestCase(import.meta.url, {
 			},
 		},
 		'tsconfig.json': tsconfig({
-			exclude: [
-				'*.ts',
-				'?/?/c.ts',
-				'**/e.ts',
-				'f.ts',
-				'a/c',
-			],
+			exclude: ['*.ts', '?/?/c.ts', '**/e.ts', 'f.ts', 'a/c'],
 		}),
 	},
 	path: '.',

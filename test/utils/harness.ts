@@ -26,81 +26,85 @@ export async function runTestCase (url: string, json: TestCase) {
 	const pass = Object.keys(json.files).length > 0;
 	const skip = shouldSkip(json.if);
 
-	await test(path.basename(url).replace(/\.js$/i, ''), {
-		skip,
-	}, async (t) => {
-		mock(t);
-		const dir = t.testdir({
-			testdir: json.spec,
-		});
-
-		await t.test('absolute', async (t) => {
-			const data = new ResolutionData({
-				useRelativePaths: true,
+	await test(
+		path.basename(url).replace(/\.js$/i, ''),
+		{
+			skip,
+		},
+		async (t) => {
+			mock(t);
+			const dir = t.testdir({
+				testdir: json.spec,
 			});
-			const root = path.resolve(dir, 'testdir');
-			const searchPath = path.join(root, json.path);
 
-			if (pass) {
-				data.loadConfig(searchPath);
+			await t.test('absolute', async (t) => {
+				const data = new ResolutionData({
+					useRelativePaths: true,
+				});
+				const root = path.resolve(dir, 'testdir');
+				const searchPath = path.join(root, json.path);
 
-				checkResolution(
-					t,
-					data,
-					json.files,
-					(file) => path.relative(root, file),
-					String,
-				);
-			} else {
-				t.throws(() => {
+				if (pass) {
 					data.loadConfig(searchPath);
-				}, 'project should error');
-			}
-		});
 
-		await t.test('relative indirect', async (t) => {
-			process.chdir(dir);
-			const data = new ResolutionData({
-				useRelativePaths: true,
+					checkResolution(
+						t,
+						data,
+						json.files,
+						(file) => path.relative(root, file),
+						String,
+					);
+				} else {
+					t.throws(() => {
+						data.loadConfig(searchPath);
+					}, 'project should error');
+				}
 			});
-			const searchPath = path.join('testdir', json.path);
 
-			if (pass) {
-				data.loadConfig(searchPath);
+			await t.test('relative indirect', async (t) => {
+				process.chdir(dir);
+				const data = new ResolutionData({
+					useRelativePaths: true,
+				});
+				const searchPath = path.join('testdir', json.path);
 
-				checkResolution(
-					t,
-					data,
-					json.files,
-					(file) => path.relative('testdir', file),
-					String,
-				);
-			} else {
-				t.throws(() => {
+				if (pass) {
 					data.loadConfig(searchPath);
-				}, 'project should error');
-			}
-		});
 
-		await t.test('relative direct', async (t) => {
-			process.chdir(path.join(dir, 'testdir', json.path));
-			const data = new ResolutionData({
-				useRelativePaths: true,
+					checkResolution(
+						t,
+						data,
+						json.files,
+						(file) => path.relative('testdir', file),
+						String,
+					);
+				} else {
+					t.throws(() => {
+						data.loadConfig(searchPath);
+					}, 'project should error');
+				}
 			});
 
-			if (pass) {
-				data.loadConfig('.');
+			await t.test('relative direct', async (t) => {
+				process.chdir(path.join(dir, 'testdir', json.path));
+				const data = new ResolutionData({
+					useRelativePaths: true,
+				});
 
-				checkResolution(t, data, json.files, String, (file) =>
-					path.relative(json.path, file),
-				);
-			} else {
-				t.throws(() => {
+				if (pass) {
 					data.loadConfig('.');
-				}, 'project should error');
-			}
-		});
-	});
+
+					checkResolution(t, data, json.files, String, (file) =>
+						path.relative(json.path, file),
+					);
+				} else {
+					t.throws(() => {
+						data.loadConfig('.');
+					}, 'project should error');
+				}
+			});
+		},
+	);
 }
 
 function checkResolution (
@@ -139,7 +143,9 @@ function checkResolution (
 	const expectedOutputFiles = new Map<string, OutputFile>();
 
 	for (const [key, value] of Object.entries(files)) {
-		const sourceFile = new SourceFile(value.map((file) => fixUpExpected(file)));
+		const sourceFile = new SourceFile(
+			value.map((file) => fixUpExpected(file)),
+		);
 		expectedSourceFiles.set(fixUpExpected(key), sourceFile);
 		expectedOutputFiles.set(
 			sourceFile.outputFile,
@@ -161,15 +167,26 @@ function checkResolution (
 }
 
 function shouldSkip (conditions: TestCase['if'] = {}) {
-	if (conditions['case-sensitive'] !== undefined && conditions['case-sensitive'] !== ts.sys.useCaseSensitiveFileNames) {
-		return `${conditions['case-sensitive'] ? 'case-sensitive' : 'case-insensitive'} file system required`;
+	if (
+		conditions['case-sensitive'] !== undefined
+		&& conditions['case-sensitive'] !== ts.sys.useCaseSensitiveFileNames
+	) {
+		return `${
+			conditions['case-sensitive'] ? 'case-sensitive' : 'case-insensitive'
+		} file system required`;
 	}
 
-	if (conditions.node !== undefined && !semver.satisfies(process.versions.node, conditions.node)) {
+	if (
+		conditions.node !== undefined
+		&& !semver.satisfies(process.versions.node, conditions.node)
+	) {
 		return `Node.JS “${conditions.node}” required`;
 	}
 
-	if (conditions.typescript !== undefined && !semver.satisfies(ts.version, conditions.typescript)) {
+	if (
+		conditions.typescript !== undefined
+		&& !semver.satisfies(ts.version, conditions.typescript)
+	) {
 		return `TypeScript “${conditions.typescript}” required`;
 	}
 

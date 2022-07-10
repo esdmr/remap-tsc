@@ -37,22 +37,10 @@
         }
       }
     ],
-    "@typescript-eslint/no-implicit-any-catch": [
-      "off"
-    ],
-    "@typescript-eslint/object-curly-spacing": [
-      "error",
-      "always"
-    ],
-    "@typescript-eslint/space-before-function-paren": [
-      "error",
-      "always"
-    ],
-    "object-curly-spacing": [
-      "off"
-    ],
-    "space-before-function-paren": [
-      "off"
-    ]
+    "@typescript-eslint/no-implicit-any-catch": ["off"],
+    "@typescript-eslint/object-curly-spacing": ["error", "always"],
+    "@typescript-eslint/space-before-function-paren": ["error", "always"],
+    "object-curly-spacing": ["off"],
+    "space-before-function-paren": ["off"]
   }
 }

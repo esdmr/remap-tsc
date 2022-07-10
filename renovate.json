@@ -5,9 +5,7 @@
     "helpers:pinGitHubActionDigests",
     ":ignoreUnstable"
   ],
-  "labels": [
-    "renovate"
-  ],
+  "labels": ["renovate"],
   "major": {
     "automerge": false
   },
@@ -25,9 +23,7 @@
   },
   "lockFileMaintenance": {
     "enabled": true,
-    "addLabels": [
-      "renovate/lockfile"
-    ],
+    "addLabels": ["renovate/lockfile"],
     "schedule": "at 12am on thursday",
     "automerge": true
   },
@@ -37,12 +33,8 @@
   "timezone": "Asia/Tehran",
   "packageRules": [
     {
-      "matchDepTypes": [
-        "devDependencies"
-      ],
-      "addLabels": [
-        "renovate/development"
-      ]
+      "matchDepTypes": ["devDependencies"],
+      "addLabels": ["renovate/development"]
     },
     {
       "matchDepTypes": [
@@ -50,9 +42,7 @@
         "optionalDependencies",
         "peerDependencies"
       ],
-      "addLabels": [
-        "renovate/production"
-      ]
+      "addLabels": ["renovate/production"]
     },
     {
       "matchPackageNames": [
@@ -61,25 +51,16 @@
         "c8",
         "tap"
       ],
-      "addLabels": [
-        "renovate/testing"
-      ],
+      "addLabels": ["renovate/testing"],
       "groupName": "testing"
     },
     {
-      "matchPackagePatterns": [
-        "^typescript$",
-        "^@types/"
-      ],
-      "addLabels": [
-        "renovate/typescript"
-      ]
+      "matchPackagePatterns": ["^typescript$", "^@types/"],
+      "addLabels": ["renovate/typescript"]
     },
     {
       "description": "node: prefixes are only supported in version 16 of @types/node",
-      "matchPackageNames": [
-        "@types/node"
-      ],
+      "matchPackageNames": ["@types/node"],
       "allowedVersions": "^16.0.0"
     },
     {
@@ -96,15 +77,11 @@
         "optionalDependencies",
         "peerDependencies"
       ],
-      "matchUpdateTypes": [
-        "minor"
-      ],
+      "matchUpdateTypes": ["minor"],
       "automerge": false
     },
     {
-      "matchManagers": [
-        "github-actions"
-      ],
+      "matchManagers": ["github-actions"],
       "schedule": "at 12am on thursday",
       "automerge": false
     }
