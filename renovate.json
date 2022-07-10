@@ -59,9 +59,8 @@
       "addLabels": ["renovate/typescript"]
     },
     {
-      "description": "node: prefixes are only supported in version 16 of @types/node",
       "matchPackageNames": ["@types/node"],
-      "allowedVersions": "^16.0.0"
+      "allowedVersions": "^14.0.0"
     },
     {
       "matchPackageNames": [
