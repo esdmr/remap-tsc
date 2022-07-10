@@ -1,0 +1,4 @@
+ts: true
+coverage: false
+reporter: "base"
+test-regex: "^build/test/(?!test-util/).*\\.js$"

@@ -1,0 +1,99 @@
+{
+  "name": "@esdmr/template",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Template project",
+  "homepage": "https://github.com/esdmr/template#readme",
+  "bugs": "https://github.com/esdmr/template/issues",
+  "repository": "https://github.com/esdmr/template",
+  "license": "MIT",
+  "author": "Saeed M Rad <esdmr0@gmail.com> (https://github.com/esdmr)",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./build/main.js",
+      "types": "./build/main.d.ts"
+    }
+  },
+  "main": "build/main.js",
+  "types": "build/main.d.ts",
+  "files": [
+    "build/**/*.js",
+    "build/**/*.d.ts",
+    "!build/api/**/*",
+    "!build/docs/**/*",
+    "!build/examples/**/*",
+    "!build/test/**/*"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "build:examples": "pnpm link . && tsc -b examples",
+    "build:update-paths": "node scripts/update-ts-paths.js",
+    "changeset": "changeset",
+    "changeset:version": "changeset version",
+    "clean": "rimraf build .nyc_output coverage",
+    "lint": "xo",
+    "lint:fix": "xo --fix",
+    "prepack": "node scripts/prepack.js",
+    "postpack": "node scripts/postpack.js",
+    "test": "tap",
+    "test:coverage": "c8 tap",
+    "test:coverage-html": "c8 report -r html",
+    "test:coverage-lcov": "c8 report -r lcov",
+    "watch": "tsc -b -w"
+  },
+  "devDependencies": {
+    "@babel/eslint-parser": "7.18.2",
+    "@changesets/cli": "2.23.0",
+    "@microsoft/api-documenter": "7.13.40",
+    "@microsoft/api-extractor": "7.18.6",
+    "@types/node": "16.11.26",
+    "@types/tap": "15.0.7",
+    "c8": "7.11.3",
+    "execa": "6.1.0",
+    "rimraf": "3.0.2",
+    "tap": "16.3.0",
+    "typescript": "4.7.4",
+    "xo": "0.49.0"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "imports": {
+    "#src/*": "./build/*",
+    "#test/*": "./build/test/*"
+  },
+  "packageManager": "pnpm@6.32.3",
+  "pnpm": {
+    "overrides": {
+      "@types/node": "^16.0.0",
+      "es-abstract": "^1.18.5"
+    },
+    "packageExtensions": {
+      "eslint-import-resolver-webpack": {
+        "peerDependenciesMeta": {
+          "webpack": {
+            "optional": true
+          }
+        }
+      },
+      "@babel/eslint-parser": {
+        "peerDependenciesMeta": {
+          "@babel/core": {
+            "optional": true
+          },
+          "eslint": {
+            "optional": true
+          }
+        }
+      }
+    }
+  },
+  "typesVersions": {
+    "*": {
+      ".": [
+        "build/main.d.ts"
+      ]
+    }
+  }
+}

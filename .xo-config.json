@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json.schemastore.org/eslintrc.json",
+  "parser": "@babel/eslint-parser",
+  "parserOptions": {
+    "requireConfigFile": false
+  },
+  "rules": {
+    "arrow-parens": [
+      "error",
+      "always"
+    ],
+    "no-await-in-loop": "off",
+    "node/no-unsupported-features/es-syntax": [
+      "error",
+      {
+        "ignores": [
+          "modules",
+          "dynamicImport"
+        ]
+      }
+    ],
+    "object-property-newline": "error",
+    "object-curly-newline": [
+      "error",
+      {
+        "ObjectExpression": {
+          "multiline": true,
+          "minProperties": 1
+        },
+        "ObjectPattern": {
+          "multiline": true
+        },
+        "ImportDeclaration": "never",
+        "ExportDeclaration": {
+          "multiline": true,
+          "minProperties": 3
+        }
+      }
+    ],
+    "object-curly-spacing": [
+      "error",
+      "always"
+    ],
+    "space-before-function-paren": [
+      "error",
+      "always"
+    ],
+    "unicorn/prefer-json-parse-buffer": [
+      "off"
+    ]
+  },
+  "overrides": [
+    {
+      "files": "**.ts",
+      "extends": "./.xo-config.ts.json"
+    },
+    {
+      "files": "**.tsx",
+      "extends": "./.xo-config.ts.json"
+    },
+    {
+      "files": "**.mts",
+      "extends": "./.xo-config.ts.json"
+    },
+    {
+      "files": "**.cts",
+      "extends": "./.xo-config.ts.json",
+      "rules": {
+        "unicorn/prefer-module": "off"
+      }
+    },
+    {
+      "files": "**.cjs",
+      "rules": {
+        "unicorn/prefer-module": "off"
+      }
+    }
+  ]
+}
