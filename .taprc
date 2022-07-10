@@ -1,4 +1,4 @@
 ts: true
 coverage: false
 reporter: "base"
-test-regex: "^build/test/(?!test-util/).*\\.js$"
+test-regex: "^build/test/(?!utils/).*\\.js$"

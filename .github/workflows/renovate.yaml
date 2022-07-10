@@ -3,14 +3,14 @@ name: Validate renovate config
 on:
   push:
     branches:
-      - master
+      - main
       - releases/**
     paths:
       - ".github/workflows/renovate.yml"
       - "renovate.json"
   pull_request:
     branches:
-      - master
+      - main
       - releases/**
     paths:
       - ".github/workflows/renovate.yml"

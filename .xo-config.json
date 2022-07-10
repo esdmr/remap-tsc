@@ -1,8 +1,9 @@
 {
-  "$schema": "https://json.schemastore.org/eslintrc.json",
-  "parser": "@babel/eslint-parser",
+  "env": [
+    "es6"
+  ],
   "parserOptions": {
-    "requireConfigFile": false
+    "ecmaVersion": 2022
   },
   "rules": {
     "arrow-parens": [
@@ -10,15 +11,6 @@
       "always"
     ],
     "no-await-in-loop": "off",
-    "node/no-unsupported-features/es-syntax": [
-      "error",
-      {
-        "ignores": [
-          "modules",
-          "dynamicImport"
-        ]
-      }
-    ],
     "object-property-newline": "error",
     "object-curly-newline": [
       "error",
@@ -46,6 +38,9 @@
       "always"
     ],
     "unicorn/prefer-json-parse-buffer": [
+      "off"
+    ],
+    "import/extensions": [
       "off"
     ]
   },

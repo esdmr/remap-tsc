@@ -1,34 +1,23 @@
 {
-  "name": "@esdmr/template",
+  "name": "@esdmr/remap-tsc",
   "version": "0.0.0",
-  "private": true,
-  "description": "Template project",
-  "homepage": "https://github.com/esdmr/template#readme",
-  "bugs": "https://github.com/esdmr/template/issues",
-  "repository": "https://github.com/esdmr/template",
+  "description": "Map TypeScript compiler source files to output files and vice versa",
+  "homepage": "https://github.com/esdmr/remap-tsc#readme",
+  "bugs": "https://github.com/esdmr/remap-tsc/issues",
+  "repository": "https://github.com/esdmr/remap-tsc",
   "license": "MIT",
   "author": "Saeed M Rad <esdmr0@gmail.com> (https://github.com/esdmr)",
   "type": "module",
-  "exports": {
-    ".": {
-      "import": "./build/main.js",
-      "types": "./build/main.d.ts"
-    }
-  },
-  "main": "build/main.js",
-  "types": "build/main.d.ts",
+  "exports": "./build/index.js",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
   "files": [
-    "build/**/*.js",
-    "build/**/*.d.ts",
-    "!build/api/**/*",
-    "!build/docs/**/*",
-    "!build/examples/**/*",
-    "!build/test/**/*"
+    "build/index.js",
+    "build/index.d.ts"
   ],
   "scripts": {
     "build": "tsc -b",
     "build:examples": "pnpm link . && tsc -b examples",
-    "build:update-paths": "node scripts/update-ts-paths.js",
     "changeset": "changeset",
     "changeset:version": "changeset version",
     "clean": "rimraf build .nyc_output coverage",
@@ -43,31 +32,32 @@
     "watch": "tsc -b -w"
   },
   "devDependencies": {
-    "@babel/eslint-parser": "7.18.2",
-    "@changesets/cli": "2.23.0",
-    "@microsoft/api-documenter": "7.13.40",
-    "@microsoft/api-extractor": "7.18.6",
-    "@types/node": "16.11.26",
+    "@changesets/cli": "2.23.1",
+    "@types/mock-fs": "4.13.1",
+    "@types/node": "14.18.21",
+    "@types/semver": "7.3.10",
     "@types/tap": "15.0.7",
     "c8": "7.11.3",
     "execa": "6.1.0",
+    "mock-fs": "5.1.2",
     "rimraf": "3.0.2",
+    "semver": "7.3.7",
     "tap": "16.3.0",
+    "tsconfig-type": "1.25.0",
     "typescript": "4.7.4",
-    "xo": "0.49.0"
+    "xo": "0.50.0"
   },
-  "engines": {
-    "node": ">=16"
-  },
-  "imports": {
-    "#src/*": "./build/*",
-    "#test/*": "./build/test/*"
+  "peerDependencies": {
+    "typescript": "4.7.x"
   },
   "packageManager": "pnpm@6.32.3",
+  "engines": {
+    "node": ">=14"
+  },
   "pnpm": {
     "overrides": {
-      "@types/node": "^16.0.0",
-      "es-abstract": "^1.18.5"
+      "@types/node": "^14.0.0",
+      "istanbul-lib-processinfo": "^2.0.3"
     },
     "packageExtensions": {
       "eslint-import-resolver-webpack": {
@@ -76,24 +66,7 @@
             "optional": true
           }
         }
-      },
-      "@babel/eslint-parser": {
-        "peerDependenciesMeta": {
-          "@babel/core": {
-            "optional": true
-          },
-          "eslint": {
-            "optional": true
-          }
-        }
       }
-    }
-  },
-  "typesVersions": {
-    "*": {
-      ".": [
-        "build/main.d.ts"
-      ]
     }
   }
 }

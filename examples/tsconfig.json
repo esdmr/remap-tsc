@@ -4,10 +4,12 @@
   "compilerOptions": {
     "composite": true,
     "outDir": "../build/examples",
-    "baseUrl": "."
+    "rootDir": "."
   },
-  "include": [
-    "**/*"
-  ],
-  "references": []
+  "include": ["**/*"],
+  "references": [
+    {
+      "path": "../src"
+    }
+  ]
 }

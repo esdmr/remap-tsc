@@ -4,19 +4,9 @@
   "compilerOptions": {
     "composite": true,
     "outDir": "../build/test",
-    "baseUrl": ".",
-    "paths": {
-      "#src/*": [
-        "../src/*"
-      ],
-      "#test/*": [
-        "*"
-      ]
-    }
+    "rootDir": "."
   },
-  "include": [
-    "**/*"
-  ],
+  "include": ["**/*"],
   "references": [
     {
       "path": "../src"
