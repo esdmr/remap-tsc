@@ -105,7 +105,7 @@ export class ResolutionData {
 		);
 
 		if (configFile.error) {
-			throw new Error(
+			throw new ResolutionError(
 				ts.formatDiagnostics([configFile.error], this._host.formatDiagnostics),
 			);
 		}
@@ -119,7 +119,7 @@ export class ResolutionData {
 		);
 
 		if (commandLine.errors.length > 0) {
-			throw new Error(
+			throw new ResolutionError(
 				ts.formatDiagnostics(commandLine.errors, this._host.formatDiagnostics),
 			);
 		}
