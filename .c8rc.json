@@ -2,5 +2,5 @@
   "src": ["build"],
   "all": true,
   "clean": true,
-  "exclude": ["build/test"]
+  "exclude": ["build/test", "build/examples"]
 }
