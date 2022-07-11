@@ -9,9 +9,12 @@
   "author": "Saeed M Rad <esdmr0@gmail.com> (https://github.com/esdmr)",
   "type": "module",
   "exports": {
-    "types": "./build/index.d.ts",
-    "require": "./build/index.cjs",
-    "import": "./build/index.js"
+    ".": {
+      "types": "./build/index.d.ts",
+      "require": "./build/index.cjs",
+      "import": "./build/index.js"
+    },
+    "./package.json": "./package.json"
   },
   "main": "build/index.cjs",
   "types": "build/index.d.ts",
