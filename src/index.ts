@@ -76,12 +76,12 @@ export class ResolutionData {
 	private readonly _host: ResolutionHost;
 	private readonly _workingDirectory: string;
 
-	get sourceFiles (): ReadonlyMap<string, SourceFile> {
-		return this._sourceFiles;
+	get sourceFiles () {
+		return this._sourceFiles.entries();
 	}
 
-	get outputFiles (): ReadonlyMap<string, OutputFile> {
-		return this._outputFiles;
+	get outputFiles () {
+		return this._outputFiles.entries();
 	}
 
 	constructor (options: ResolutionOptions = {}) {
