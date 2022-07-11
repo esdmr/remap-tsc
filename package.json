@@ -2,6 +2,9 @@
   "name": "@esdmr/remap-tsc",
   "version": "0.0.0",
   "description": "Map TypeScript compiler source files to output files and vice versa",
+  "keywords": [
+    "typescript"
+  ],
   "homepage": "https://github.com/esdmr/remap-tsc#readme",
   "bugs": "https://github.com/esdmr/remap-tsc/issues",
   "repository": "https://github.com/esdmr/remap-tsc",
