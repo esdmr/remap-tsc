@@ -40,7 +40,7 @@ jobs:
         run: pnpm config set store-dir ~/.pnpm-store
 
       - name: Cache pnpm modules
-        uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed # renovate: tag=v2
+        uses: actions/cache@c3f1317a9e7b1ef106c153ac8c0f00fed3ddbc0d # tag=v3
         with:
           path: ~/.pnpm-store
           key: ${{ runner.OS }}-pnpm-current-${{ hashFiles('pnpm-lock.yaml') }}
