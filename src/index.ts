@@ -3,8 +3,48 @@ import ts from 'typescript';
 
 const tsConfigFileName = 'tsconfig.json';
 
+const defaultResolutionHost: ResolutionHost = {
+	formatDiagnostics: {
+		getCanonicalFileName: (path) => path,
+		getCurrentDirectory: ts.sys.getCurrentDirectory,
+		getNewLine: () => ts.sys.newLine,
+	},
+	parseConfig: {
+		fileExists: ts.sys.fileExists,
+		readDirectory: ts.sys.readDirectory,
+		readFile: ts.sys.readFile,
+		useCaseSensitiveFileNames: ts.sys.useCaseSensitiveFileNames,
+	},
+};
+
 function isJavaScriptFile (path: string) {
 	return /\.[cm]?js$/i.exec(path);
+}
+
+export interface ResolutionHost {
+	readonly formatDiagnostics: ts.FormatDiagnosticsHost;
+	readonly parseConfig: ts.ParseConfigHost;
+}
+
+interface ResolutionOptions {
+	/**
+	 * The paths in {@link sourceFiles} and {@link outputFiles} would be
+	 * relative to the current working directory.
+	 *
+	 * @default false
+	 */
+	useRelativePaths?: boolean;
+	/**
+	 * Custom TypeScript host for non-Node.JS environments.
+	 */
+	host?: ResolutionHost;
+	/**
+	 * Working directory to resolve relative paths. It will be resolved to a
+	 * absolute path first.
+	 *
+	 * @default process.cwd()
+	 */
+	workingDirectory?: string;
 }
 
 export class ResolutionError extends Error {
@@ -29,30 +69,12 @@ export class OutputFile {
 	constructor (readonly sourceFile: string) {}
 }
 
-export interface ResolutionHost {
-	readonly formatDiagnostics: ts.FormatDiagnosticsHost;
-	readonly parseConfig: ts.ParseConfigHost;
-}
-
-const defaultResolutionHost: ResolutionHost = {
-	formatDiagnostics: {
-		getCanonicalFileName: (path) => path,
-		getCurrentDirectory: ts.sys.getCurrentDirectory,
-		getNewLine: () => ts.sys.newLine,
-	},
-	parseConfig: {
-		fileExists: ts.sys.fileExists,
-		readDirectory: ts.sys.readDirectory,
-		readFile: ts.sys.readFile,
-		useCaseSensitiveFileNames: ts.sys.useCaseSensitiveFileNames,
-	},
-};
-
 export class ResolutionData {
 	private readonly _sourceFiles = new Map<string, SourceFile>();
 	private readonly _outputFiles = new Map<string, OutputFile>();
 	private readonly _useRelativePaths: boolean;
 	private readonly _host: ResolutionHost;
+	private readonly _workingDirectory: string;
 
 	get sourceFiles (): ReadonlyMap<string, SourceFile> {
 		return this._sourceFiles;
@@ -62,28 +84,15 @@ export class ResolutionData {
 		return this._outputFiles;
 	}
 
-	constructor (
-		options: {
-			/**
-			 * The paths in {@link sourceFiles} and {@link outputFiles} would be
-			 * relative to the current working directory.
-			 *
-			 * @default false
-			 */
-			useRelativePaths?: boolean;
-			/**
-			 * Custom TypeScript host for non-Node.JS environments.
-			 */
-			host?: ResolutionHost;
-		} = {},
-	) {
+	constructor (options: ResolutionOptions = {}) {
 		this._useRelativePaths = options.useRelativePaths ?? false;
 		this._host = options.host ?? defaultResolutionHost;
+		this._workingDirectory = path.resolve(options.workingDirectory ?? '');
 	}
 
 	getSourceFile (filePath: string) {
 		if (this._useRelativePaths) {
-			filePath = path.relative('', filePath);
+			filePath = path.relative(this._workingDirectory, filePath);
 		}
 
 		return this._sourceFiles.get(filePath);
@@ -91,14 +100,16 @@ export class ResolutionData {
 
 	getOutputFile (filePath: string) {
 		if (this._useRelativePaths) {
-			filePath = path.relative('', filePath);
+			filePath = path.relative(this._workingDirectory, filePath);
 		}
 
 		return this._outputFiles.get(filePath);
 	}
 
 	loadConfig (searchPath: string) {
-		const configPath = this.findConfig(path.resolve(searchPath));
+		const configPath = this.findConfig(
+			path.resolve(this._workingDirectory, searchPath),
+		);
 		const configFile = ts.readConfigFile(
 			configPath,
 			this._host.parseConfig.readFile,
@@ -173,8 +184,10 @@ export class ResolutionData {
 
 	private addMapping (input: string, outputs: readonly string[]) {
 		if (this._useRelativePaths) {
-			input = path.relative('', input);
-			outputs = outputs.map((file) => path.relative('', file));
+			input = path.relative(this._workingDirectory, input);
+			outputs = outputs.map((file) =>
+				path.relative(this._workingDirectory, file),
+			);
 		}
 
 		if (this._sourceFiles.has(input)) {
