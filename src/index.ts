@@ -107,7 +107,7 @@ export class ResolutionData {
 	}
 
 	loadConfig (searchPath: string) {
-		const configPath = this.findConfig(
+		const configPath = this._findConfig(
 			path.resolve(this._workingDirectory, searchPath),
 		);
 		const configFile = ts.readConfigFile(
@@ -141,10 +141,10 @@ export class ResolutionData {
 			);
 		}
 
-		this.validateCommandLine(commandLine);
+		this._validateCommandLine(commandLine);
 
 		for (const file of commandLine.fileNames) {
-			this.addMapping(
+			this._addMapping(
 				file,
 				ts.getOutputFileNames(
 					commandLine,
@@ -155,7 +155,7 @@ export class ResolutionData {
 		}
 	}
 
-	private findConfig (searchPath: string) {
+	private _findConfig (searchPath: string) {
 		const configPath = ts.findConfigFile(
 			searchPath,
 			this._host.parseConfig.fileExists,
@@ -169,7 +169,7 @@ export class ResolutionData {
 		return path.normalize(configPath);
 	}
 
-	private validateCommandLine (commandLine: ts.ParsedCommandLine) {
+	private _validateCommandLine (commandLine: ts.ParsedCommandLine) {
 		const { noEmit, emitDeclarationOnly, outFile, out }
 			= commandLine.options;
 
@@ -182,7 +182,7 @@ export class ResolutionData {
 		}
 	}
 
-	private addMapping (input: string, outputs: readonly string[]) {
+	private _addMapping (input: string, outputs: readonly string[]) {
 		if (this._useRelativePaths) {
 			input = path.relative(this._workingDirectory, input);
 			outputs = outputs.map((file) =>
