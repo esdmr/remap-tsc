@@ -2,6 +2,7 @@ import { runTestCase, tsconfig } from './utils/harness.js';
 
 await runTestCase(import.meta.url, {
 	spec: {
+		// TypeScript does not copy input json files to the output.
 		'a.json': 'null',
 		'tsconfig.json': tsconfig({
 			compilerOptions: {
@@ -11,7 +12,5 @@ await runTestCase(import.meta.url, {
 		}),
 	},
 	path: '.',
-	// Currently, we do not accept an output which does not output a JavaScript
-	// file.
 	files: {},
 });

@@ -5,7 +5,7 @@ import mockFs from 'mock-fs';
 declare global {
 	// eslint-disable-next-line @typescript-eslint/no-namespace
 	namespace Tap {
-		interface Test extends EventEmitter { }
+		interface Test extends EventEmitter {}
 	}
 }
 

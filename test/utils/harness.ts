@@ -13,7 +13,7 @@ export interface TestCase {
 		readonly node?: string;
 		readonly typescript?: string;
 	};
-	readonly files: Files;
+	readonly files?: Files;
 }
 
 export type Files = Record<string, readonly string[]>;
@@ -22,12 +22,14 @@ export function tsconfig (config: Tsconfig) {
 	return JSON.stringify(config);
 }
 
-export async function runTestCase (url: string, json: TestCase) {
-	const pass = Object.keys(json.files).length > 0;
+export async function runTestCase (file: string | URL, json: TestCase) {
+	const pass = json.files !== undefined;
 	const skip = shouldSkip(json.if);
+	const url = new URL(file);
 
 	await test(
-		path.basename(url).replace(/\.js$/i, ''),
+		path.basename(url.pathname).replace(/\.js$/i, '').trim()
+			+ (url.hash ? '#' + decodeURIComponent(url.hash.slice(1)) : ''),
 		{
 			skip,
 		},
@@ -128,7 +130,9 @@ function checkResolution (
 	for (const [key, value] of data.sourceFiles) {
 		actualSourceFiles.set(
 			fixUpActual(key),
-			new SourceFile([fixUpActual(value.outputFile)]),
+			new SourceFile(
+				[...value.outputFiles].map((file) => fixUpActual(file)),
+			),
 		);
 	}
 
@@ -147,10 +151,13 @@ function checkResolution (
 			value.map((file) => fixUpExpected(file)),
 		);
 		expectedSourceFiles.set(fixUpExpected(key), sourceFile);
-		expectedOutputFiles.set(
-			sourceFile.outputFile,
-			new OutputFile(fixUpExpected(key)),
-		);
+
+		for (const outputFile of sourceFile.outputFiles) {
+			expectedOutputFiles.set(
+				outputFile,
+				new OutputFile(fixUpExpected(key)),
+			);
+		}
 	}
 
 	t.strictSame(

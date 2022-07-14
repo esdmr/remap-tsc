@@ -19,7 +19,7 @@ await runTestCase(import.meta.url, {
 	},
 	path: 'src',
 	files: {
-		'a.ts': ['src/a.js'],
-		'src/b.ts': ['src/build/b.js'],
+		'a.ts': ['src/a.js', 'src/a.d.ts'],
+		'src/b.ts': ['src/build/b.js', 'src/build/b.d.ts'],
 	},
 });

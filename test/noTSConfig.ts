@@ -5,5 +5,4 @@ await runTestCase(import.meta.url, {
 		'a.ts': '',
 	},
 	path: '.',
-	files: {},
 });

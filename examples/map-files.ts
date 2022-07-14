@@ -18,7 +18,13 @@ const data = new ResolutionData({
 data.loadConfig('tsconfig.json');
 
 // Map source to output.
-assert.strictEqual(data.getSourceFile('src/index.ts')?.outputFile, 'build/index.js');
+assert.strictEqual(
+	data.getSourceFile('src/index.ts')?.javaScriptFile,
+	'build/index.js',
+);
 
 // Map output to source.
-assert.strictEqual(data.getOutputFile('build/index.js')?.sourceFile, 'src/index.ts');
+assert.strictEqual(
+	data.getOutputFile('build/index.js')?.sourceFile,
+	'src/index.ts',
+);
