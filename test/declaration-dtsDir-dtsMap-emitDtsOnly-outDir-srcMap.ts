@@ -2,13 +2,20 @@ import { runTestCase, tsconfig } from './utils/harness.js';
 
 await runTestCase(import.meta.url, {
 	spec: {
-		'a.ts': '',
+		'b.ts': '',
 		'tsconfig.json': tsconfig({
 			compilerOptions: {
+				declaration: true,
+				declarationDir: 'types',
+				declarationMap: true,
 				emitDeclarationOnly: true,
+				outDir: 'build',
+				sourceMap: true,
 			},
 		}),
 	},
 	path: '.',
-	files: {},
+	files: {
+		'b.ts': ['types/b.d.ts', 'types/b.d.ts.map'],
+	},
 });

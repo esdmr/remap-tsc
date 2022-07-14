@@ -2,18 +2,20 @@ import { runTestCase, tsconfig } from './utils/harness.js';
 
 await runTestCase(import.meta.url, {
 	spec: {
-		'a.ts': '',
+		// TypeScript does not copy input declarations to the output.
+		'a.d.ts': '',
+		core: {
+			'b.ts': '',
+		},
 		'tsconfig.json': tsconfig({
 			compilerOptions: {
-				// With composite, rootDir defaults to “the directory containing the
-				// tsconfig.json file”.
-				composite: true,
+				rootDir: '.',
 				outDir: 'build',
 			},
 		}),
 	},
 	path: '.',
 	files: {
-		'a.ts': ['build/a.js', 'build/a.d.ts'],
+		'core/b.ts': ['build/core/b.js'],
 	},
 });

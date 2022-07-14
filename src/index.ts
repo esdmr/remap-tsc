@@ -17,16 +17,12 @@ const defaultResolutionHost: ResolutionHost = {
 	},
 };
 
-function isJavaScriptFile (path: string) {
-	return /\.[cm]?js$/i.exec(path);
-}
-
 export interface ResolutionHost {
 	readonly formatDiagnostics: ts.FormatDiagnosticsHost;
 	readonly parseConfig: ts.ParseConfigHost;
 }
 
-interface ResolutionOptions {
+export interface ResolutionOptions {
 	/**
 	 * The paths in {@link sourceFiles} and {@link outputFiles} would be
 	 * relative to the current working directory.
@@ -45,23 +41,44 @@ interface ResolutionOptions {
 	 * @default process.cwd()
 	 */
 	workingDirectory?: string;
+	/**
+	 * If `noEmit` was set in the tsconfig, it would throw an error, instead of
+	 * reporting no source/output files.
+	 *
+	 * @default true
+	 */
+	throwIfEmitIsDisabled?: boolean;
 }
 
 export class ResolutionError extends Error {
 	override name = 'ResolutionError';
+
+	constructor (name: string, description: string) {
+		super(`${name}\n${description}`);
+	}
 }
 
 export class SourceFile {
-	readonly outputFile: string;
+	readonly javaScriptFile: string | undefined;
+	readonly declarationFile: string | undefined;
+	readonly sourceMapFiles: ReadonlySet<string>;
+	readonly outputFiles: ReadonlySet<string>;
 
-	constructor (outputs: readonly string[]) {
-		const outputFile = outputs.find((file) => isJavaScriptFile(file));
+	constructor (outputFiles: readonly string[]) {
+		const sourceMapFiles = new Set<string>();
 
-		if (!outputFile) {
-			throw new ResolutionError('File does not have a JavaScript output');
+		for (const path of outputFiles) {
+			if (/\.[cm]?js$/i.exec(path) !== null) {
+				this.javaScriptFile = path;
+			} else if (/\.d\.[cm]?ts$/i.exec(path) !== null) {
+				this.declarationFile = path;
+			} else if (/\.map$/i.exec(path) !== null) {
+				sourceMapFiles.add(path);
+			}
 		}
 
-		this.outputFile = outputFile;
+		this.sourceMapFiles = sourceMapFiles;
+		this.outputFiles = new Set(outputFiles);
 	}
 }
 
@@ -75,6 +92,7 @@ export class ResolutionData {
 	private readonly _useRelativePaths: boolean;
 	private readonly _host: ResolutionHost;
 	private readonly _workingDirectory: string;
+	private readonly _throwIfEmitIsDisabled: boolean;
 
 	get sourceFiles () {
 		return this._sourceFiles.entries();
@@ -88,6 +106,7 @@ export class ResolutionData {
 		this._useRelativePaths = options.useRelativePaths ?? false;
 		this._host = options.host ?? defaultResolutionHost;
 		this._workingDirectory = path.resolve(options.workingDirectory ?? '');
+		this._throwIfEmitIsDisabled = options.throwIfEmitIsDisabled ?? true;
 	}
 
 	getSourceFile (filePath: string) {
@@ -117,6 +136,7 @@ export class ResolutionData {
 
 		if (configFile.error) {
 			throw new ResolutionError(
+				'Reading the tsconfig failed',
 				ts.formatDiagnostics(
 					[configFile.error],
 					this._host.formatDiagnostics,
@@ -134,6 +154,7 @@ export class ResolutionData {
 
 		if (commandLine.errors.length > 0) {
 			throw new ResolutionError(
+				'Parsing the tsconfig failed',
 				ts.formatDiagnostics(
 					commandLine.errors,
 					this._host.formatDiagnostics,
@@ -142,6 +163,10 @@ export class ResolutionData {
 		}
 
 		this._validateCommandLine(commandLine);
+
+		if (commandLine.options.noEmit) {
+			return;
+		}
 
 		for (const file of commandLine.fileNames) {
 			this._addMapping(
@@ -163,26 +188,38 @@ export class ResolutionData {
 		);
 
 		if (!configPath) {
-			throw new ResolutionError('Could not find a tsconfig file.');
+			throw new ResolutionError(
+				'Could not find a tsconfig file',
+				`Searched in "${searchPath}".`,
+			);
 		}
 
 		return path.normalize(configPath);
 	}
 
 	private _validateCommandLine (commandLine: ts.ParsedCommandLine) {
-		const { noEmit, emitDeclarationOnly, outFile, out }
-			= commandLine.options;
+		const { noEmit, outFile, out } = commandLine.options;
 
-		if (noEmit || emitDeclarationOnly) {
-			throw new ResolutionError('Cannot map files when emit is disabled');
+		if (noEmit && this._throwIfEmitIsDisabled) {
+			throw new ResolutionError(
+				'Cannot map files when emit is disabled',
+				'noEmit is set. You can disable this error via throwIfEmitIsDisabled.',
+			);
 		}
 
 		if (outFile || out) {
-			throw new ResolutionError('Cannot map files with an outFile');
+			throw new ResolutionError(
+				'Cannot map files with an outFile',
+				'If you intend to use a outFile, use a library that can consume source maps instead.',
+			);
 		}
 	}
 
 	private _addMapping (input: string, outputs: readonly string[]) {
+		if (outputs.length === 0) {
+			return;
+		}
+
 		if (this._useRelativePaths) {
 			input = path.relative(this._workingDirectory, input);
 			outputs = outputs.map((file) =>
@@ -190,19 +227,17 @@ export class ResolutionData {
 			);
 		}
 
-		if (this._sourceFiles.has(input)) {
-			throw new ResolutionError('This input was already processed');
+		const oldSourceFile = this._sourceFiles.get(input);
+
+		if (oldSourceFile !== undefined) {
+			outputs = [...oldSourceFile.outputFiles, ...outputs];
 		}
 
 		const sourceFile = new SourceFile(outputs);
-
-		if (this._outputFiles.has(sourceFile.outputFile)) {
-			throw new ResolutionError(
-				'Multiple sources emit to the same output file',
-			);
-		}
-
 		this._sourceFiles.set(input, sourceFile);
-		this._outputFiles.set(sourceFile.outputFile, new OutputFile(input));
+
+		for (const outputFile of sourceFile.outputFiles) {
+			this._outputFiles.set(outputFile, new OutputFile(input));
+		}
 	}
 }

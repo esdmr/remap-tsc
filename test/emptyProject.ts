@@ -5,5 +5,4 @@ await runTestCase(import.meta.url, {
 		'tsconfig.json': tsconfig({}),
 	},
 	path: '.',
-	files: {},
 });

@@ -2,13 +2,21 @@ import { runTestCase, tsconfig } from './utils/harness.js';
 
 await runTestCase(import.meta.url, {
 	spec: {
-		// TypeScript does not emit JSON files if not explicitly included.
-		'a.json': 'null',
+		src: {
+			'a.js': '',
+		},
 		'tsconfig.json': tsconfig({
 			compilerOptions: {
-				resolveJsonModule: true,
+				allowJs: true,
+				outDir: 'build',
+				rootDir: 'src',
+				declaration: true,
+				emitDeclarationOnly: true,
 			},
 		}),
 	},
 	path: '.',
+	files: {
+		'src/a.js': ['build/a.d.ts'],
+	},
 });
