@@ -10,17 +10,9 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 Usage: node scripts/build-server.js [options]
 
 Options:
---production  Minify
 --tsc         Run tsc in the background
---watch       Watch for changes
-
-Environment variables:
-NODE_ENV=production  Equivalent to --production`);
+--watch       Watch for changes`);
 }
-
-const isProduction
-	= process.env.NODE_ENV === 'production'
-	|| process.argv.includes('--production');
 
 const shouldWatch = process.argv.includes('--watch');
 const shouldRunTsc = process.argv.includes('--tsc');
@@ -29,16 +21,14 @@ const shouldRunTsc = process.argv.includes('--tsc');
 const buildOptions = {
 	absWorkingDir: resolvePath('..'),
 	platform: 'node',
-	bundle: true,
 	watch: shouldWatch,
-	minify: isProduction,
-	sourcemap: !isProduction,
+	minify: true,
+	keepNames: true,
+	sourcemap: true,
+	sourcesContent: false,
 	plugins: [nodeExternalsPlugin()],
+	target: 'node14',
 };
-
-if (isProduction) {
-	console.log('Currently in a production environment.');
-}
 
 const esmResult = await build({
 	...buildOptions,
