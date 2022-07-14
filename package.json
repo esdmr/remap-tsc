@@ -22,9 +22,14 @@
   "main": "build/index.cjs",
   "types": "build/index.d.ts",
   "files": [
-    "build/index.js",
-    "build/index.cjs",
-    "build/index.d.ts"
+    "CHANGELOG.md",
+    "src/**/*.ts",
+    "build/**/*.js",
+    "build/**/*.cjs",
+    "build/**/*.d.ts",
+    "build/**/*.map",
+    "!build/test/**/*",
+    "!build/examples/**/*"
   ],
   "scripts": {
     "build": "node scripts/build.js --tsc",

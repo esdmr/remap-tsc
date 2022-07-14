@@ -10,16 +10,8 @@ function processPackageJson (packageMeta) {
 	// Cleanup package.json
 	delete packageMeta.scripts;
 	delete packageMeta.devDependencies;
-	delete packageMeta.engines.pnpm;
-	delete packageMeta.imports['#test/*'];
 	delete packageMeta.packageManager;
 	delete packageMeta.pnpm;
-
-	const exports = packageMeta.exports ?? {};
-
-	for (const subpath of Object.keys(exports)) {
-		delete exports[subpath].docs;
-	}
 
 	return packageMeta;
 }
