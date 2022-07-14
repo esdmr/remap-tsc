@@ -1,9 +1,13 @@
 import path from 'node:path';
 import process from 'node:process';
+import { execa } from 'execa';
 import semver from 'semver';
 import { test } from 'tap';
 import { Tsconfig } from 'tsconfig-type';
-import { OutputFile, ResolutionData, SourceFile, ts, mock } from './source.js';
+import readdirp from 'readdirp';
+import { OutputFile, ResolutionData, SourceFile, ts, mock, isMockingEnabled } from './source.js';
+
+const isTscEnabled = !isMockingEnabled && Boolean(process.env.TEST_ENABLE_TSC);
 
 export interface TestCase {
 	readonly spec: Tap.Fixture.Spec;
@@ -22,9 +26,9 @@ export function tsconfig (config: Tsconfig) {
 	return JSON.stringify(config);
 }
 
-export async function runTestCase (file: string | URL, json: TestCase) {
-	const pass = json.files !== undefined;
-	const skip = shouldSkip(json.if);
+export async function runTestCase (file: string | URL, testCase: TestCase) {
+	const pass = testCase.files !== undefined;
+	const skip = shouldSkip(testCase.if);
 	const url = new URL(file);
 
 	await test(
@@ -35,16 +39,16 @@ export async function runTestCase (file: string | URL, json: TestCase) {
 		},
 		async (t) => {
 			mock(t);
-			const dir = t.testdir({
-				testdir: json.spec,
-			});
+			const dir = path.resolve(t.testdir({
+				testdir: testCase.spec,
+			}));
 
-			await t.test('absolute', async (t) => {
+			await t.test('via absolute path', async (t) => {
 				const data = new ResolutionData({
 					useRelativePaths: true,
 				});
 				const root = path.resolve(dir, 'testdir');
-				const searchPath = path.join(root, json.path);
+				const searchPath = path.join(root, testCase.path);
 
 				if (pass) {
 					data.loadConfig(searchPath);
@@ -52,7 +56,7 @@ export async function runTestCase (file: string | URL, json: TestCase) {
 					checkResolution(
 						t,
 						data,
-						json.files,
+						testCase.files,
 						(file) => path.relative(root, file),
 						String,
 					);
@@ -63,12 +67,12 @@ export async function runTestCase (file: string | URL, json: TestCase) {
 				}
 			});
 
-			await t.test('relative indirect', async (t) => {
+			await t.test('via relative indirect path', async (t) => {
 				process.chdir(dir);
 				const data = new ResolutionData({
 					useRelativePaths: true,
 				});
-				const searchPath = path.join('testdir', json.path);
+				const searchPath = path.join('testdir', testCase.path);
 
 				if (pass) {
 					data.loadConfig(searchPath);
@@ -76,7 +80,7 @@ export async function runTestCase (file: string | URL, json: TestCase) {
 					checkResolution(
 						t,
 						data,
-						json.files,
+						testCase.files,
 						(file) => path.relative('testdir', file),
 						String,
 					);
@@ -87,8 +91,8 @@ export async function runTestCase (file: string | URL, json: TestCase) {
 				}
 			});
 
-			await t.test('relative direct', async (t) => {
-				process.chdir(path.join(dir, 'testdir', json.path));
+			await t.test('via relative direct path', async (t) => {
+				process.chdir(path.join(dir, 'testdir', testCase.path));
 				const data = new ResolutionData({
 					useRelativePaths: true,
 				});
@@ -96,8 +100,8 @@ export async function runTestCase (file: string | URL, json: TestCase) {
 				if (pass) {
 					data.loadConfig('.');
 
-					checkResolution(t, data, json.files, String, (file) =>
-						path.relative(json.path, file),
+					checkResolution(t, data, testCase.files, String, (file) =>
+						path.relative(testCase.path, file),
 					);
 				} else {
 					t.throws(() => {
@@ -105,8 +109,61 @@ export async function runTestCase (file: string | URL, json: TestCase) {
 					}, 'project should error');
 				}
 			});
+
+			await t.test(
+				'via tsc',
+				{
+					skip: isTscEnabled ? false : 'tsc was disabled',
+				},
+				async (t) => {
+					if (pass) {
+						t.strictSame(
+							await getTscBuildPaths(testCase, dir),
+							getTestCaseBuildPaths(testCase),
+							'build paths match',
+						);
+					} else {
+						await t.rejects(runTsc(testCase, dir), 'tsc should error');
+					}
+				},
+			);
 		},
 	);
+}
+
+function getTestCaseBuildPaths (testCase: TestCase) {
+	const buildPaths = new Set<string>();
+
+	for (const paths of Object.values(testCase.files!)) {
+		for (const path of paths) {
+			buildPaths.add(path);
+		}
+	}
+
+	return buildPaths;
+}
+
+async function getTscBuildPaths (testCase: TestCase, dir: string) {
+	const sourcePaths = new Set<string>();
+
+	for await (const item of readdirp(path.resolve(dir, 'testdir'))) {
+		sourcePaths.add(item.path);
+	}
+
+	await runTsc(testCase, dir);
+	const buildPaths = new Set<string>();
+
+	for await (const item of readdirp(path.resolve(dir, 'testdir'))) {
+		if (!sourcePaths.has(item.path)) {
+			buildPaths.add(item.path);
+		}
+	}
+
+	return buildPaths;
+}
+
+async function runTsc (testCase: TestCase, dir: string) {
+	return execa('pnpm', ['exec', 'tsc', '-p', path.resolve(dir, 'testdir', testCase.path)]);
 }
 
 function checkResolution (
