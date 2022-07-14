@@ -48,7 +48,6 @@ const cjsResult = await build({
 let tscResult;
 
 if (shouldRunTsc) {
-	/** @type {string[]} */
 	const options = ['exec', 'tsc', '-b', '--preserveWatchOutput'];
 
 	if (shouldWatch) {

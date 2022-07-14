@@ -9,7 +9,7 @@ declare global {
 	}
 }
 
-const isMockingEnabled = !process.env.TEST_DISABLE_VFS;
+export const isMockingEnabled = !process.env.TEST_DISABLE_VFS;
 let shouldMock = false;
 
 export const mock = isMockingEnabled
