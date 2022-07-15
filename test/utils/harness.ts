@@ -13,9 +13,11 @@ export interface TestCase {
 	readonly spec: Tap.Fixture.Spec;
 	readonly path: string;
 	readonly if?: {
-		readonly 'case-sensitive'?: boolean;
+		readonly caseSensitive?: boolean;
 		readonly node?: string;
 		readonly typescript?: string;
+		readonly vfs?: boolean;
+		readonly tsc?: boolean;
 	};
 	readonly files?: Files;
 }
@@ -110,12 +112,8 @@ export async function runTestCase (file: string | URL, testCase: TestCase) {
 				}
 			});
 
-			await t.test(
-				'via tsc',
-				{
-					skip: isTscEnabled ? false : 'tsc was disabled',
-				},
-				async (t) => {
+			if (isTscEnabled) {
+				await t.test('via tsc', async (t) => {
 					if (pass) {
 						t.strictSame(
 							await getTscBuildPaths(testCase, dir),
@@ -125,8 +123,8 @@ export async function runTestCase (file: string | URL, testCase: TestCase) {
 					} else {
 						await t.rejects(runTsc(testCase, dir), 'tsc should error');
 					}
-				},
-			);
+				});
+			}
 		},
 	);
 }
@@ -154,7 +152,7 @@ async function getTscBuildPaths (testCase: TestCase, dir: string) {
 	const buildPaths = new Set<string>();
 
 	for await (const item of readdirp(path.resolve(dir, 'testdir'))) {
-		if (!sourcePaths.has(item.path)) {
+		if (!sourcePaths.has(item.path) && !item.path.endsWith('.tsbuildinfo')) {
 			buildPaths.add(item.path);
 		}
 	}
@@ -163,7 +161,9 @@ async function getTscBuildPaths (testCase: TestCase, dir: string) {
 }
 
 async function runTsc (testCase: TestCase, dir: string) {
-	return execa('pnpm', ['exec', 'tsc', '-p', path.resolve(dir, 'testdir', testCase.path)]);
+	return execa('pnpm', ['exec', 'tsc', '-p', path.resolve(dir, 'testdir', testCase.path)], {
+		stdio: 'inherit',
+	});
 }
 
 function checkResolution (
@@ -232,11 +232,11 @@ function checkResolution (
 
 function shouldSkip (conditions: TestCase['if'] = {}) {
 	if (
-		conditions['case-sensitive'] !== undefined
-		&& conditions['case-sensitive'] !== ts.sys.useCaseSensitiveFileNames
+		conditions.caseSensitive !== undefined
+		&& conditions.caseSensitive !== ts.sys.useCaseSensitiveFileNames
 	) {
 		return `${
-			conditions['case-sensitive'] ? 'case-sensitive' : 'case-insensitive'
+			conditions.caseSensitive ? 'case-sensitive' : 'case-insensitive'
 		} file system required`;
 	}
 
@@ -252,6 +252,24 @@ function shouldSkip (conditions: TestCase['if'] = {}) {
 		&& !semver.satisfies(ts.version, conditions.typescript)
 	) {
 		return `TypeScript “${conditions.typescript}” required`;
+	}
+
+	if (
+		conditions.vfs !== undefined
+		&& conditions.vfs !== isMockingEnabled
+	) {
+		return `Virtual file system must be ${
+			conditions.vfs ? 'enabled' : 'disabled'
+		}`;
+	}
+
+	if (
+		conditions.tsc !== undefined
+		&& conditions.tsc !== isTscEnabled
+	) {
+		return `tsc must be ${
+			conditions.vfs ? 'enabled' : 'disabled'
+		}`;
 	}
 
 	return undefined;

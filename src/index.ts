@@ -1,7 +1,7 @@
 import path from 'node:path';
 import ts from 'typescript';
 
-const tsConfigFileName = 'tsconfig.json';
+const configFileName = 'tsconfig.json';
 
 const defaultResolutionHost: ResolutionHost = {
 	formatDiagnostics: {
@@ -48,13 +48,19 @@ export interface ResolutionOptions {
 	 * @default true
 	 */
 	throwIfEmitIsDisabled?: boolean;
+	/**
+	 * If the tsconfig is
+	 *
+	 * @default true
+	 */
+	throwIfConfigIsNotUnderSearchPath?: boolean;
 }
 
 export class ResolutionError extends Error {
 	override name = 'ResolutionError';
 
-	constructor (name: string, description: string) {
-		super(`${name}\n${description}`);
+	constructor (...lines: readonly [string, string?]) {
+		super(lines.join('\n'));
 	}
 }
 
@@ -86,13 +92,16 @@ export class OutputFile {
 	constructor (readonly sourceFile: string) {}
 }
 
+function isPathUnderneathRoot (root: string, file: string) {
+	const relative = path.relative(root, file);
+
+	return relative && relative.split(path.sep, 1)[0] !== '..' && !path.isAbsolute(relative);
+}
+
 export class ResolutionData {
 	private readonly _sourceFiles = new Map<string, SourceFile>();
 	private readonly _outputFiles = new Map<string, OutputFile>();
-	private readonly _useRelativePaths: boolean;
-	private readonly _host: ResolutionHost;
-	private readonly _workingDirectory: string;
-	private readonly _throwIfEmitIsDisabled: boolean;
+	private readonly _options: Required<ResolutionOptions>;
 
 	get sourceFiles () {
 		return this._sourceFiles.entries();
@@ -103,23 +112,27 @@ export class ResolutionData {
 	}
 
 	constructor (options: ResolutionOptions = {}) {
-		this._useRelativePaths = options.useRelativePaths ?? false;
-		this._host = options.host ?? defaultResolutionHost;
-		this._workingDirectory = path.resolve(options.workingDirectory ?? '');
-		this._throwIfEmitIsDisabled = options.throwIfEmitIsDisabled ?? true;
+		this._options = {
+			useRelativePaths: false,
+			host: defaultResolutionHost,
+			throwIfEmitIsDisabled: true,
+			throwIfConfigIsNotUnderSearchPath: true,
+			...options,
+			workingDirectory: path.resolve(options.workingDirectory ?? ''),
+		};
 	}
 
 	getSourceFile (filePath: string) {
-		if (this._useRelativePaths) {
-			filePath = path.relative(this._workingDirectory, filePath);
+		if (this._options.useRelativePaths) {
+			filePath = path.relative(this._options.workingDirectory, filePath);
 		}
 
 		return this._sourceFiles.get(filePath);
 	}
 
 	getOutputFile (filePath: string) {
-		if (this._useRelativePaths) {
-			filePath = path.relative(this._workingDirectory, filePath);
+		if (this._options.useRelativePaths) {
+			filePath = path.relative(this._options.workingDirectory, filePath);
 		}
 
 		return this._outputFiles.get(filePath);
@@ -127,26 +140,26 @@ export class ResolutionData {
 
 	loadConfig (searchPath: string) {
 		const configPath = this._findConfig(
-			path.resolve(this._workingDirectory, searchPath),
+			path.resolve(this._options.workingDirectory, searchPath),
 		);
 		const configFile = ts.readConfigFile(
 			configPath,
-			this._host.parseConfig.readFile,
+			this._options.host.parseConfig.readFile,
 		);
 
 		if (configFile.error) {
 			throw new ResolutionError(
-				'Reading the tsconfig failed',
+				'Reading the tsconfig failed.',
 				ts.formatDiagnostics(
 					[configFile.error],
-					this._host.formatDiagnostics,
+					this._options.host.formatDiagnostics,
 				),
 			);
 		}
 
 		const commandLine = ts.parseJsonConfigFileContent(
 			configFile.config,
-			this._host.parseConfig,
+			this._options.host.parseConfig,
 			path.dirname(configPath),
 			undefined,
 			configPath,
@@ -154,10 +167,10 @@ export class ResolutionData {
 
 		if (commandLine.errors.length > 0) {
 			throw new ResolutionError(
-				'Parsing the tsconfig failed',
+				'Parsing the tsconfig failed.',
 				ts.formatDiagnostics(
 					commandLine.errors,
-					this._host.formatDiagnostics,
+					this._options.host.formatDiagnostics,
 				),
 			);
 		}
@@ -168,13 +181,24 @@ export class ResolutionData {
 			return;
 		}
 
-		for (const file of commandLine.fileNames) {
+		const { composite, rootDir } = commandLine.options;
+		let effectiveRoot: string | undefined;
+
+		// If composite is set, the default [rootDir] is […] the directory
+		// containing the tsconfig.json file.
+		if (composite || rootDir !== undefined) {
+			effectiveRoot = path.resolve(path.dirname(configPath), rootDir ?? '.');
+		}
+
+		for (const fileName of commandLine.fileNames) {
+			this._validateFile(fileName, effectiveRoot);
+
 			this._addMapping(
-				file,
+				fileName,
 				ts.getOutputFileNames(
 					commandLine,
-					file,
-					!this._host.parseConfig.useCaseSensitiveFileNames,
+					fileName,
+					!this._options.host.parseConfig.useCaseSensitiveFileNames,
 				),
 			);
 		}
@@ -183,14 +207,32 @@ export class ResolutionData {
 	private _findConfig (searchPath: string) {
 		const configPath = ts.findConfigFile(
 			searchPath,
-			this._host.parseConfig.fileExists,
-			tsConfigFileName,
+			this._options.host.parseConfig.fileExists,
+			configFileName,
 		);
+
+		const formattedSearchPath = this._options.useRelativePaths
+			? path.relative(this._options.workingDirectory, searchPath) || '.'
+			: searchPath;
 
 		if (!configPath) {
 			throw new ResolutionError(
-				'Could not find a tsconfig file',
-				`Searched in "${searchPath}".`,
+				'Could not find a tsconfig file.',
+				`Searched in "${formattedSearchPath}".`,
+			);
+		}
+
+		const formattedConfigPath = this._options.useRelativePaths
+			? path.relative(this._options.workingDirectory, configPath)
+			: configPath;
+
+		if (
+			this._options.throwIfConfigIsNotUnderSearchPath
+			&& !isPathUnderneathRoot(searchPath, configPath)
+		) {
+			throw new ResolutionError(
+				'Found tsconfig file is not under the search path.',
+				`Searched in "${formattedSearchPath}" and found a tsconfig at "${formattedConfigPath}".`,
 			);
 		}
 
@@ -198,19 +240,66 @@ export class ResolutionData {
 	}
 
 	private _validateCommandLine (commandLine: ts.ParsedCommandLine) {
-		const { noEmit, outFile, out } = commandLine.options;
+		const {
+			composite,
+			declaration,
+			emitDeclarationOnly,
+			inlineSourceMap,
+			noEmit,
+			out,
+			outFile,
+			sourceMap,
+		} = commandLine.options;
 
-		if (noEmit && this._throwIfEmitIsDisabled) {
+		if (noEmit && this._options.throwIfEmitIsDisabled) {
 			throw new ResolutionError(
-				'Cannot map files when emit is disabled',
+				'Cannot map files when emit is disabled.',
 				'noEmit is set. You can disable this error via throwIfEmitIsDisabled.',
 			);
 		}
 
 		if (outFile || out) {
 			throw new ResolutionError(
-				'Cannot map files with an outFile',
-				'If you intend to use a outFile, use a library that can consume source maps instead.',
+				'Cannot map files with an outFile.',
+				'If you intend to use an outFile, use a library that can consume source maps instead.',
+			);
+		}
+
+		if (sourceMap && inlineSourceMap) {
+			throw new ResolutionError(
+				'TS5053: Option sourceMap cannot be specified with option inlineSourceMap.',
+				'sourceMap and inlineSourceMap are mutually exclusive.',
+			);
+		}
+
+		if (emitDeclarationOnly && !declaration && !composite) {
+			throw new ResolutionError(
+				'TS5069: Option emitDeclarationOnly cannot be specified without specifying option declaration or option composite.',
+				'emitDeclarationOnly requires declarations to be emitted.',
+			);
+		}
+	}
+
+	private _validateFile (fileName: string, effectiveRoot: string | undefined) {
+		const formattedFileName = this._options.useRelativePaths
+			? path.relative(this._options.workingDirectory, fileName)
+			: fileName;
+
+		if (!ts.sys.fileExists(fileName)) {
+			throw new ResolutionError(
+				'TS6053: File not found.',
+				`The file would have been at "${formattedFileName}". All specified files must exist.`,
+			);
+		}
+
+		if (effectiveRoot !== undefined && !isPathUnderneathRoot(effectiveRoot, fileName)) {
+			const formattedRoot = this._options.useRelativePaths
+				? path.relative(this._options.workingDirectory, effectiveRoot) || '.'
+				: effectiveRoot;
+
+			throw new ResolutionError(
+				'TS6059: File is not under rootDir.',
+				`The file is at "${formattedFileName}" and the rootDir is at "${formattedRoot}". rootDir is expected to contain all source files.`,
 			);
 		}
 	}
@@ -220,10 +309,17 @@ export class ResolutionData {
 			return;
 		}
 
-		if (this._useRelativePaths) {
-			input = path.relative(this._workingDirectory, input);
+		if (this._options.useRelativePaths) {
+			input = path.relative(this._options.workingDirectory, input);
 			outputs = outputs.map((file) =>
-				path.relative(this._workingDirectory, file),
+				path.relative(this._options.workingDirectory, file),
+			);
+		}
+
+		if (outputs.includes(input)) {
+			throw new ResolutionError(
+				'TS5055: Cannot write file because it would overwrite input file.',
+				`The input file is at "${input}".`,
 			);
 		}
 

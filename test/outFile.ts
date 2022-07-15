@@ -12,4 +12,7 @@ await runTestCase(import.meta.url, {
 		}),
 	},
 	path: '.',
+	if: {
+		tsc: false,
+	},
 });
