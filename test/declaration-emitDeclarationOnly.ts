@@ -4,12 +4,14 @@ await runTestCase(import.meta.url, {
 	spec: {
 		'a.ts': '',
 		'tsconfig.json': tsconfig({
-			// TypeScript could not find any file in “includes” which matched.
-			include: ['A.ts'],
+			compilerOptions: {
+				declaration: true,
+				emitDeclarationOnly: true,
+			},
 		}),
 	},
 	path: '.',
-	if: {
-		caseSensitive: true,
+	files: {
+		'a.ts': ['a.d.ts'],
 	},
 });

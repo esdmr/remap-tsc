@@ -5,10 +5,11 @@ await runTestCase(import.meta.url, {
 		'a.ts': '',
 		'tsconfig.json': tsconfig({
 			compilerOptions: {
+				// EmitDeclarationOnly requires either declaration or composite
+				// to be enabled.
 				emitDeclarationOnly: true,
 			},
 		}),
 	},
 	path: '.',
-	files: {},
 });
