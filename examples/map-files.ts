@@ -1,7 +1,7 @@
 import assert from 'node:assert';
-import { ResolutionData } from '@esdmr/remap-tsc';
+import { TscRemap } from '@esdmr/remap-tsc';
 
-const data = new ResolutionData({
+const data = new TscRemap({
 	// For this example:
 	useRelativePaths: true,
 });
