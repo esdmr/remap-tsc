@@ -10,20 +10,28 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 Usage: node scripts/build-server.js [options]
 
 Options:
---tsc         Run tsc in the background
---watch       Watch for changes`);
+--tsc    Run tsc in the background
+--watch  Watch for changes
+--dev    Disable identifier minification`);
 }
 
 const shouldWatch = process.argv.includes('--watch');
 const shouldRunTsc = process.argv.includes('--tsc');
+const isDev = shouldWatch || process.argv.includes('--dev');
+
+if (isDev) {
+	console.info('This is a development build.');
+}
 
 /** @type {import('esbuild').BuildOptions} */
 const buildOptions = {
 	absWorkingDir: resolvePath('..'),
 	platform: 'node',
 	watch: shouldWatch,
-	minify: true,
-	keepNames: true,
+	minify: !isDev,
+	keepNames: !isDev,
+	minifySyntax: isDev,
+	minifyWhitespace: isDev,
 	sourcemap: true,
 	sourcesContent: false,
 	plugins: [nodeExternalsPlugin()],

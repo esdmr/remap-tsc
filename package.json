@@ -33,6 +33,7 @@
   ],
   "scripts": {
     "build": "node scripts/build.js --tsc",
+    "build:dev": "node scripts/build.js --tsc --dev",
     "changeset": "changeset",
     "changeset:version": "changeset version",
     "clean": "rimraf build .nyc_output coverage",
