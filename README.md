@@ -8,8 +8,7 @@
 [workflow]: https://github.com/esdmr/remap-tsc/actions/workflows/ci.yml
 [codecov]: https://codecov.io/gh/esdmr/remap-tsc
 [license]: https://github.com/esdmr/remap-tsc/blob/main/LICENSE
-[node]: https://nodejs.org/en/download/current
-[pnpm]: https://pnpm.io
+[node]: https://nodejs.org
 
 Map TypeScript compiler source files to output files and vice versa.
 
