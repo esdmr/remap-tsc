@@ -5,7 +5,7 @@ import semver from 'semver';
 import { test } from 'tap';
 import { Tsconfig } from 'tsconfig-type';
 import readdirp from 'readdirp';
-import { OutputFile, ResolutionData, SourceFile, ts, mock, isMockingEnabled } from './source.js';
+import { OutputFile, TscRemap, SourceFile, ts, mock, isMockingEnabled } from './source.js';
 
 const isTscEnabled = !isMockingEnabled && Boolean(process.env.TEST_ENABLE_TSC);
 
@@ -46,7 +46,7 @@ export async function runTestCase (file: string | URL, testCase: TestCase) {
 			}));
 
 			await t.test('via absolute path', async (t) => {
-				const data = new ResolutionData({
+				const data = new TscRemap({
 					useRelativePaths: true,
 				});
 				const root = path.resolve(dir, 'testdir');
@@ -71,7 +71,7 @@ export async function runTestCase (file: string | URL, testCase: TestCase) {
 
 			await t.test('via relative indirect path', async (t) => {
 				process.chdir(dir);
-				const data = new ResolutionData({
+				const data = new TscRemap({
 					useRelativePaths: true,
 				});
 				const searchPath = path.join('testdir', testCase.path);
@@ -95,7 +95,7 @@ export async function runTestCase (file: string | URL, testCase: TestCase) {
 
 			await t.test('via relative direct path', async (t) => {
 				process.chdir(path.join(dir, 'testdir', testCase.path));
-				const data = new ResolutionData({
+				const data = new TscRemap({
 					useRelativePaths: true,
 				});
 
@@ -168,7 +168,7 @@ async function runTsc (testCase: TestCase, dir: string) {
 
 function checkResolution (
 	t: Tap.Test,
-	data: ResolutionData,
+	data: TscRemap,
 	files: Files,
 	fixUpActual: (file: string) => string,
 	fixUpExpected: (file: string) => string,

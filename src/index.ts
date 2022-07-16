@@ -1,9 +1,7 @@
 import path from 'node:path';
 import ts from 'typescript';
 
-const configFileName = 'tsconfig.json';
-
-const defaultResolutionHost: ResolutionHost = {
+const defaultRemapHost: RemapHost = {
 	formatDiagnostics: {
 		getCanonicalFileName: (path) => path,
 		getCurrentDirectory: ts.sys.getCurrentDirectory,
@@ -17,12 +15,12 @@ const defaultResolutionHost: ResolutionHost = {
 	},
 };
 
-export interface ResolutionHost {
+export interface RemapHost {
 	readonly formatDiagnostics: ts.FormatDiagnosticsHost;
 	readonly parseConfig: ts.ParseConfigHost;
 }
 
-export interface ResolutionOptions {
+export interface RemapOptions {
 	/**
 	 * The paths in {@link sourceFiles} and {@link outputFiles} would be
 	 * relative to the current working directory.
@@ -33,31 +31,34 @@ export interface ResolutionOptions {
 	/**
 	 * Custom TypeScript host for non-Node.JS environments.
 	 */
-	host?: ResolutionHost;
+	host?: RemapHost;
 	/**
-	 * Working directory to resolve relative paths. It will be resolved to a
+	 * Working directory to resolve relative paths. It will be resolved to an
 	 * absolute path first.
 	 *
 	 * @default process.cwd()
 	 */
 	workingDirectory?: string;
 	/**
-	 * If `noEmit` was set in the tsconfig, it would throw an error, instead of
-	 * reporting no source/output files.
+	 * Since the entire point of {@link TscRemap} is to map source/output files,
+	 * it would be useless if there are no output. Nevertheless, by disabling
+	 * this flag, loading a tsconfig with `noEmit` would return silently without
+	 * adding any source/output file.
 	 *
 	 * @default true
 	 */
 	throwIfEmitIsDisabled?: boolean;
 	/**
-	 * If the tsconfig is
+	 * The tsconfig would be contained within the search path. Otherwise, a
+	 * tsconfig may be found at any upper directory.
 	 *
 	 * @default true
 	 */
-	throwIfConfigIsNotUnderSearchPath?: boolean;
+	searchPathIsRoot?: boolean;
 }
 
-export class ResolutionError extends Error {
-	override name = 'ResolutionError';
+export class RemapError extends Error {
+	override name = RemapError.name;
 
 	constructor (...lines: readonly [string, string?]) {
 		super(lines.join('\n'));
@@ -92,16 +93,16 @@ export class OutputFile {
 	constructor (readonly sourceFile: string) {}
 }
 
-function isPathUnderneathRoot (root: string, file: string) {
+function isPathUnderRoot (root: string, file: string) {
 	const relative = path.relative(root, file);
 
 	return relative && relative.split(path.sep, 1)[0] !== '..' && !path.isAbsolute(relative);
 }
 
-export class ResolutionData {
+export class TscRemap {
 	private readonly _sourceFiles = new Map<string, SourceFile>();
 	private readonly _outputFiles = new Map<string, OutputFile>();
-	private readonly _options: Required<ResolutionOptions>;
+	private readonly _options: Required<RemapOptions>;
 
 	get sourceFiles () {
 		return this._sourceFiles.entries();
@@ -111,12 +112,12 @@ export class ResolutionData {
 		return this._outputFiles.entries();
 	}
 
-	constructor (options: ResolutionOptions = {}) {
+	constructor (options: RemapOptions = {}) {
 		this._options = {
 			useRelativePaths: false,
-			host: defaultResolutionHost,
+			host: defaultRemapHost,
 			throwIfEmitIsDisabled: true,
-			throwIfConfigIsNotUnderSearchPath: true,
+			searchPathIsRoot: true,
 			...options,
 			workingDirectory: path.resolve(options.workingDirectory ?? ''),
 		};
@@ -148,7 +149,7 @@ export class ResolutionData {
 		);
 
 		if (configFile.error) {
-			throw new ResolutionError(
+			throw new RemapError(
 				'Reading the tsconfig failed.',
 				ts.formatDiagnostics(
 					[configFile.error],
@@ -166,7 +167,7 @@ export class ResolutionData {
 		);
 
 		if (commandLine.errors.length > 0) {
-			throw new ResolutionError(
+			throw new RemapError(
 				'Parsing the tsconfig failed.',
 				ts.formatDiagnostics(
 					commandLine.errors,
@@ -208,7 +209,6 @@ export class ResolutionData {
 		const configPath = ts.findConfigFile(
 			searchPath,
 			this._options.host.parseConfig.fileExists,
-			configFileName,
 		);
 
 		const formattedSearchPath = this._options.useRelativePaths
@@ -216,7 +216,7 @@ export class ResolutionData {
 			: searchPath;
 
 		if (!configPath) {
-			throw new ResolutionError(
+			throw new RemapError(
 				'Could not find a tsconfig file.',
 				`Searched in "${formattedSearchPath}".`,
 			);
@@ -227,10 +227,10 @@ export class ResolutionData {
 			: configPath;
 
 		if (
-			this._options.throwIfConfigIsNotUnderSearchPath
-			&& !isPathUnderneathRoot(searchPath, configPath)
+			this._options.searchPathIsRoot
+			&& !isPathUnderRoot(searchPath, configPath)
 		) {
-			throw new ResolutionError(
+			throw new RemapError(
 				'Found tsconfig file is not under the search path.',
 				`Searched in "${formattedSearchPath}" and found a tsconfig at "${formattedConfigPath}".`,
 			);
@@ -252,28 +252,28 @@ export class ResolutionData {
 		} = commandLine.options;
 
 		if (noEmit && this._options.throwIfEmitIsDisabled) {
-			throw new ResolutionError(
+			throw new RemapError(
 				'Cannot map files when emit is disabled.',
-				'noEmit is set. You can disable this error via throwIfEmitIsDisabled.',
+				'noEmit is set. (You can disable this error via throwIfEmitIsDisabled.)',
 			);
 		}
 
 		if (outFile || out) {
-			throw new ResolutionError(
+			throw new RemapError(
 				'Cannot map files with an outFile.',
 				'If you intend to use an outFile, use a library that can consume source maps instead.',
 			);
 		}
 
 		if (sourceMap && inlineSourceMap) {
-			throw new ResolutionError(
+			throw new RemapError(
 				'TS5053: Option sourceMap cannot be specified with option inlineSourceMap.',
 				'sourceMap and inlineSourceMap are mutually exclusive.',
 			);
 		}
 
 		if (emitDeclarationOnly && !declaration && !composite) {
-			throw new ResolutionError(
+			throw new RemapError(
 				'TS5069: Option emitDeclarationOnly cannot be specified without specifying option declaration or option composite.',
 				'emitDeclarationOnly requires declarations to be emitted.',
 			);
@@ -286,18 +286,18 @@ export class ResolutionData {
 			: fileName;
 
 		if (!ts.sys.fileExists(fileName)) {
-			throw new ResolutionError(
+			throw new RemapError(
 				'TS6053: File not found.',
 				`The file would have been at "${formattedFileName}". All specified files must exist.`,
 			);
 		}
 
-		if (effectiveRoot !== undefined && !isPathUnderneathRoot(effectiveRoot, fileName)) {
+		if (effectiveRoot !== undefined && !isPathUnderRoot(effectiveRoot, fileName)) {
 			const formattedRoot = this._options.useRelativePaths
 				? path.relative(this._options.workingDirectory, effectiveRoot) || '.'
 				: effectiveRoot;
 
-			throw new ResolutionError(
+			throw new RemapError(
 				'TS6059: File is not under rootDir.',
 				`The file is at "${formattedFileName}" and the rootDir is at "${formattedRoot}". rootDir is expected to contain all source files.`,
 			);
@@ -317,7 +317,7 @@ export class ResolutionData {
 		}
 
 		if (outputs.includes(input)) {
-			throw new ResolutionError(
+			throw new RemapError(
 				'TS5055: Cannot write file because it would overwrite input file.',
 				`The input file is at "${input}".`,
 			);
