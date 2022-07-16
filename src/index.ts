@@ -49,7 +49,7 @@ export interface RemapOptions {
 	 */
 	throwIfEmitIsDisabled?: boolean;
 	/**
-	 * the tsconfig would be contained within the search path. Otherwise, a
+	 * The tsconfig would be contained within the search path. Otherwise, a
 	 * tsconfig may be found at any upper directory.
 	 *
 	 * @default true
