@@ -17,7 +17,7 @@ Options:
 
 const shouldWatch = process.argv.includes('--watch');
 const shouldRunTsc = process.argv.includes('--tsc');
-const isDev = process.argv.includes('--dev');
+const isDev = shouldWatch || process.argv.includes('--dev');
 
 if (isDev) {
 	console.info('This is a development build.');

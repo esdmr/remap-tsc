@@ -45,7 +45,7 @@
     "test:coverage": "c8 tap",
     "test:coverage-html": "c8 report -r html",
     "test:coverage-lcov": "c8 report -r lcov",
-    "watch": "node scripts/build.js --tsc --watch --dev"
+    "watch": "node scripts/build.js --tsc --watch"
   },
   "devDependencies": {
     "@changesets/cli": "2.23.1",
