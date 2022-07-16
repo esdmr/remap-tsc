@@ -33,6 +33,7 @@
   ],
   "scripts": {
     "build": "node scripts/build.js --tsc",
+    "build:dev": "node scripts/build.js --tsc --dev",
     "changeset": "changeset",
     "changeset:version": "changeset version",
     "clean": "rimraf build .nyc_output coverage",
@@ -44,7 +45,7 @@
     "test:coverage": "c8 tap",
     "test:coverage-html": "c8 report -r html",
     "test:coverage-lcov": "c8 report -r lcov",
-    "watch": "node scripts/build.js --tsc --watch"
+    "watch": "node scripts/build.js --tsc --watch --dev"
   },
   "devDependencies": {
     "@changesets/cli": "2.23.1",
