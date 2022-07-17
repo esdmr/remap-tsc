@@ -5,7 +5,7 @@ import semver from 'semver';
 import { test } from 'tap';
 import { Tsconfig } from 'tsconfig-type';
 import readdirp from 'readdirp';
-import { OutputFile, TscRemap, SourceFile, ts, mock, isMockingEnabled } from './source.js';
+import { OutputFile, TscRemap, SourceFile, ts, mock, isMockingEnabled, RemapOptions } from './source.js';
 
 const isTscEnabled = !isMockingEnabled && Boolean(process.env.TEST_ENABLE_TSC);
 
@@ -28,7 +28,7 @@ export function tsconfig (config: Tsconfig) {
 	return JSON.stringify(config);
 }
 
-export async function runTestCase (file: string | URL, testCase: TestCase) {
+export async function runTestCase (file: string | URL, testCase: TestCase, remapOptions: RemapOptions = {}) {
 	const pass = testCase.files !== undefined;
 	const skip = shouldSkip(testCase.if);
 	const url = new URL(file);
@@ -48,6 +48,7 @@ export async function runTestCase (file: string | URL, testCase: TestCase) {
 			await t.test('via absolute path', async (t) => {
 				const data = new TscRemap({
 					useRelativePaths: true,
+					...remapOptions,
 				});
 				const root = path.resolve(dir, 'testdir');
 				const searchPath = path.join(root, testCase.path);
@@ -73,6 +74,7 @@ export async function runTestCase (file: string | URL, testCase: TestCase) {
 				process.chdir(dir);
 				const data = new TscRemap({
 					useRelativePaths: true,
+					...remapOptions,
 				});
 				const searchPath = path.join('testdir', testCase.path);
 
@@ -97,13 +99,18 @@ export async function runTestCase (file: string | URL, testCase: TestCase) {
 				process.chdir(path.join(dir, 'testdir', testCase.path));
 				const data = new TscRemap({
 					useRelativePaths: true,
+					...remapOptions,
 				});
 
 				if (pass) {
 					data.loadConfig('.');
 
-					checkResolution(t, data, testCase.files, String, (file) =>
-						path.relative(testCase.path, file),
+					checkResolution(
+						t,
+						data,
+						testCase.files,
+						(file) => path.relative('', file),
+						(file) => path.relative(testCase.path, file),
 					);
 				} else {
 					t.throws(() => {
