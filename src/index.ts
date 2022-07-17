@@ -124,19 +124,11 @@ export class TscRemap {
 	}
 
 	getSourceFile (filePath: string) {
-		if (this._options.useRelativePaths) {
-			filePath = path.relative(this._options.workingDirectory, filePath);
-		}
-
-		return this._sourceFiles.get(filePath);
+		return this._sourceFiles.get(this._formatPath(filePath));
 	}
 
 	getOutputFile (filePath: string) {
-		if (this._options.useRelativePaths) {
-			filePath = path.relative(this._options.workingDirectory, filePath);
-		}
-
-		return this._outputFiles.get(filePath);
+		return this._outputFiles.get(this._formatPath(filePath));
 	}
 
 	loadConfig (searchPath: string) {
@@ -205,26 +197,26 @@ export class TscRemap {
 		}
 	}
 
+	private _formatPath (file: string) {
+		if (this._options.useRelativePaths) {
+			return path.relative(this._options.workingDirectory, file) || '.';
+		}
+
+		return path.normalize(file);
+	}
+
 	private _findConfig (searchPath: string) {
 		const configPath = ts.findConfigFile(
 			searchPath,
 			this._options.host.parseConfig.fileExists,
 		);
 
-		const formattedSearchPath = this._options.useRelativePaths
-			? path.relative(this._options.workingDirectory, searchPath) || '.'
-			: searchPath;
-
 		if (!configPath) {
 			throw new RemapError(
 				'Could not find a tsconfig file.',
-				`Searched in "${formattedSearchPath}".`,
+				`Searched in "${this._formatPath(searchPath)}".`,
 			);
 		}
-
-		const formattedConfigPath = this._options.useRelativePaths
-			? path.relative(this._options.workingDirectory, configPath)
-			: configPath;
 
 		if (
 			this._options.searchPathIsRoot
@@ -232,7 +224,7 @@ export class TscRemap {
 		) {
 			throw new RemapError(
 				'Found tsconfig file is not under the search path.',
-				`Searched in "${formattedSearchPath}" and found a tsconfig at "${formattedConfigPath}".`,
+				`Searched in "${this._formatPath(searchPath)}" and found a tsconfig at "${this._formatPath(configPath)}".`,
 			);
 		}
 
@@ -281,25 +273,17 @@ export class TscRemap {
 	}
 
 	private _validateFile (fileName: string, effectiveRoot: string | undefined) {
-		const formattedFileName = this._options.useRelativePaths
-			? path.relative(this._options.workingDirectory, fileName)
-			: fileName;
-
 		if (!ts.sys.fileExists(fileName)) {
 			throw new RemapError(
 				'TS6053: File not found.',
-				`The file would have been at "${formattedFileName}". All specified files must exist.`,
+				`The file would have been at "${this._formatPath(fileName)}". All specified files must exist.`,
 			);
 		}
 
 		if (effectiveRoot !== undefined && !isPathUnderRoot(effectiveRoot, fileName)) {
-			const formattedRoot = this._options.useRelativePaths
-				? path.relative(this._options.workingDirectory, effectiveRoot) || '.'
-				: effectiveRoot;
-
 			throw new RemapError(
 				'TS6059: File is not under rootDir.',
-				`The file is at "${formattedFileName}" and the rootDir is at "${formattedRoot}". rootDir is expected to contain all source files.`,
+				`The file is at "${this._formatPath(fileName)}" and the rootDir is at "${this._formatPath(effectiveRoot)}". rootDir is expected to contain all source files.`,
 			);
 		}
 	}
@@ -309,12 +293,8 @@ export class TscRemap {
 			return;
 		}
 
-		if (this._options.useRelativePaths) {
-			input = path.relative(this._options.workingDirectory, input);
-			outputs = outputs.map((file) =>
-				path.relative(this._options.workingDirectory, file),
-			);
-		}
+		input = this._formatPath(input);
+		outputs = outputs.map((file) => this._formatPath(file));
 
 		if (outputs.includes(input)) {
 			throw new RemapError(
