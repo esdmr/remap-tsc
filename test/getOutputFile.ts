@@ -1,7 +1,7 @@
 import path from 'node:path';
 import process from 'node:process';
-import {test} from 'tap';
-import {mock, OutputFile, TscRemap} from './utils/source.js';
+import { test } from 'tap';
+import { mock, OutputFile, TscRemap } from './utils/source.js';
 import { tsconfig } from './utils/harness.js';
 
 await test('getOutputFile', async (t) => {
@@ -14,7 +14,7 @@ await test('getOutputFile', async (t) => {
 		'tsconfig.json': tsconfig({
 			compilerOptions: {
 				rootDir: 'src',
-				outDir: 'build'
+				outDir: 'build',
 			},
 		}),
 	}));
