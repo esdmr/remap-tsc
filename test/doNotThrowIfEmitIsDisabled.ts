@@ -5,12 +5,14 @@ await runTestCase(import.meta.url, {
 		src: {
 			'a.ts': '',
 		},
-		'tsconfig.json': tsconfig({}),
+		'tsconfig.json': tsconfig({
+			compilerOptions: {
+				noEmit: true,
+			},
+		}),
 	},
-	path: 'src',
-	files: {
-		'src/a.ts': ['src/a.js'],
-	},
+	path: '.',
+	files: {},
 }, {
-	searchPathIsRoot: false,
+	throwIfEmitIsDisabled: false,
 });
