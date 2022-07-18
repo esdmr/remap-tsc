@@ -7,10 +7,6 @@ await runTestCase(import.meta.url, {
 		},
 		'tsconfig.json': tsconfig({}),
 	},
+	// `tsc` does not look in upper directories.
 	path: 'src',
-	files: {
-		'src/a.ts': ['src/a.js'],
-	},
-}, {
-	searchPathIsRoot: false,
 });
