@@ -61,7 +61,7 @@ export async function runTestCase (file: string | URL, testCase: TestCase, remap
 						data,
 						testCase.files,
 						(file) => path.relative(root, file),
-						String,
+						(file) => path.normalize(file),
 					);
 				} else {
 					t.throws(() => {
@@ -86,7 +86,7 @@ export async function runTestCase (file: string | URL, testCase: TestCase, remap
 						data,
 						testCase.files,
 						(file) => path.relative('testdir', file),
-						String,
+						(file) => path.normalize(file),
 					);
 				} else {
 					t.throws(() => {
