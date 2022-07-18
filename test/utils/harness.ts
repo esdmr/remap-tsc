@@ -125,7 +125,7 @@ export async function runTestCase (file: string | URL, testCase: TestCase, remap
 						data,
 						testCase.files,
 						(file) => path.relative('', file),
-						(file) => path.relative(testCase.path, file),
+						(file) => path.relative(projectDir, file),
 					);
 				} else {
 					t.throws(() => {
