@@ -96,25 +96,40 @@ export async function runTestCase (file: string | URL, testCase: TestCase, remap
 			});
 
 			await t.test('via relative direct path', async (t) => {
-				process.chdir(path.join(dir, 'testdir', testCase.path));
+				process.chdir(path.join(dir, 'testdir'));
+
+				let projectDir: string;
+				let projectPath: string;
+
+				if (ts.sys.fileExists(testCase.path)) {
+					projectDir = path.dirname(testCase.path);
+					projectPath = path.basename(testCase.path);
+				} else if (ts.sys.directoryExists(testCase.path)) {
+					projectDir = testCase.path;
+					projectPath = '.';
+				} else {
+					throw new Error('Test case path is neither a file nor a directory');
+				}
+
+				process.chdir(projectDir);
 				const data = new TscRemap({
 					useRelativePaths: true,
 					...remapOptions,
 				});
 
 				if (pass) {
-					data.loadConfig('.');
+					data.loadConfig(projectPath);
 
 					checkResolution(
 						t,
 						data,
 						testCase.files,
 						(file) => path.relative('', file),
-						(file) => path.relative(testCase.path, file),
+						(file) => path.relative(projectDir, file),
 					);
 				} else {
 					t.throws(() => {
-						data.loadConfig('.');
+						data.loadConfig(projectPath);
 					}, 'project should error');
 				}
 			});

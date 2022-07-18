@@ -48,13 +48,6 @@ export interface RemapOptions {
 	 * @default true
 	 */
 	throwIfEmitIsDisabled?: boolean;
-	/**
-	 * The tsconfig would be contained within the search path. Otherwise, a
-	 * tsconfig may be found at any upper directory.
-	 *
-	 * @default true
-	 */
-	searchPathIsRoot?: boolean;
 }
 
 export class RemapError extends Error {
@@ -117,7 +110,6 @@ export class TscRemap {
 			useRelativePaths: false,
 			host: defaultRemapHost,
 			throwIfEmitIsDisabled: true,
-			searchPathIsRoot: true,
 			...options,
 			workingDirectory: path.resolve(options.workingDirectory ?? ''),
 		};
@@ -131,10 +123,8 @@ export class TscRemap {
 		return this._outputFiles.get(this._formatPath(filePath));
 	}
 
-	loadConfig (searchPath: string) {
-		const configPath = this._findConfig(
-			path.resolve(this._options.workingDirectory, searchPath),
-		);
+	loadConfig (projectPath: string) {
+		const configPath = this._findConfig(projectPath);
 		const configFile = ts.readConfigFile(
 			configPath,
 			this._options.host.parseConfig.readFile,
@@ -205,30 +195,23 @@ export class TscRemap {
 		return path.normalize(file);
 	}
 
-	private _findConfig (searchPath: string) {
-		const configPath = ts.findConfigFile(
-			searchPath,
-			this._options.host.parseConfig.fileExists,
+	private _findConfig (projectPath: string) {
+		projectPath = path.resolve(this._options.workingDirectory, projectPath);
+
+		if (this._options.host.parseConfig.fileExists(projectPath)) {
+			return projectPath;
+		}
+
+		const configPath = path.join(projectPath, 'tsconfig.json');
+
+		if (this._options.host.parseConfig.fileExists(configPath)) {
+			return configPath;
+		}
+
+		throw new RemapError(
+			'Could not find a tsconfig file.',
+			`Searched in "${this._formatPath(projectPath)}".`,
 		);
-
-		if (!configPath) {
-			throw new RemapError(
-				'Could not find a tsconfig file.',
-				`Searched in "${this._formatPath(searchPath)}".`,
-			);
-		}
-
-		if (
-			this._options.searchPathIsRoot
-			&& !isPathUnderRoot(searchPath, configPath)
-		) {
-			throw new RemapError(
-				'Found tsconfig file is not under the search path.',
-				`Searched in "${this._formatPath(searchPath)}" and found a tsconfig at "${this._formatPath(configPath)}".`,
-			);
-		}
-
-		return path.normalize(configPath);
 	}
 
 	private _validateCommandLine (commandLine: ts.ParsedCommandLine) {
@@ -273,7 +256,7 @@ export class TscRemap {
 	}
 
 	private _validateFile (fileName: string, effectiveRoot: string | undefined) {
-		if (!ts.sys.fileExists(fileName)) {
+		if (!this._options.host.parseConfig.fileExists(fileName)) {
 			throw new RemapError(
 				'TS6053: File not found.',
 				`The file would have been at "${this._formatPath(fileName)}". All specified files must exist.`,
