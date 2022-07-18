@@ -20,8 +20,8 @@ jobs:
         os:
           - ubuntu-latest
         node:
-          - "14"
           - "16"
+          - "14"
         include:
           - os: windows-latest
             node: "16"
@@ -59,12 +59,14 @@ jobs:
         run: pnpm run build
 
       - name: Run linter
+        if: matrix.node == '16' && matrix.os == 'ubuntu-latest'
         run: pnpm run lint
 
       - name: Run tests
         run: pnpm run test:coverage
 
       - name: Export coverage report
+        if: matrix.node == '16' && matrix.os == 'ubuntu-latest'
         run: pnpm run test:coverage-lcov
 
       - name: Upload report to CodeCov
