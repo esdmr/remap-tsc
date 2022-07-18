@@ -154,9 +154,9 @@ export async function runTestCase (file: string | URL, testCase: TestCase, remap
 function getTestCaseBuildPaths (testCase: TestCase) {
 	const buildPaths = new Set<string>();
 
-	for (const paths of Object.values(testCase.files!)) {
-		for (const path of paths) {
-			buildPaths.add(path);
+	for (const files of Object.values(testCase.files!)) {
+		for (const file of files) {
+			buildPaths.add(path.normalize(file));
 		}
 	}
 
