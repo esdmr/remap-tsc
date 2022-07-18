@@ -28,8 +28,8 @@ await test('getSourceFile', async (t) => {
 	data.loadConfig('.');
 
 	t.strictSame(
-		data.getSourceFile('src/a.ts'),
-		new SourceFile(['build/a.js']),
+		data.getSourceFile(path.normalize('src/a.ts')),
+		new SourceFile([path.normalize('build/a.js')]),
 		'should be the correct source file',
 	);
 });

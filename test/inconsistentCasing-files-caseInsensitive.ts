@@ -10,6 +10,8 @@ await runTestCase(import.meta.url, {
 	path: '.',
 	if: {
 		caseSensitive: false,
+		// Seems that mock-fs does not handle this test case well.
+		vfs: false,
 	},
 	files: {
 		'A.ts': ['A.js'],

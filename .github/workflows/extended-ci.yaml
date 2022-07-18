@@ -4,7 +4,12 @@ on: workflow_dispatch
 jobs:
   lint:
     name: CI
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
@@ -38,4 +43,7 @@ jobs:
         run: pnpm run build
 
       - name: Run extended tests
-        run: TEST_DISABLE_VFS=1 TEST_ENABLE_TSC=1 pnpm run test
+        run: pnpm run test
+        env:
+          TEST_DISABLE_VFS: "1"
+          TEST_ENABLE_TSC: "1"
