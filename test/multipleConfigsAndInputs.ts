@@ -46,11 +46,11 @@ await test('getOutputFile', async (t) => {
 		},
 		{
 			sourceFiles: new Map([
-				['a/a.ts', new SourceFile(['a.js'])],
-				['b/a.ts', new SourceFile(['a.js'])],
+				[path.normalize('a/a.ts'), new SourceFile([path.normalize('a.js')])],
+				[path.normalize('b/a.ts'), new SourceFile([path.normalize('a.js')])],
 			]),
 			outputFiles: new Map([
-				['a.js', new OutputFile('b/a.ts')],
+				[path.normalize('a.js'), new OutputFile(path.normalize('b/a.ts'))],
 			]),
 		},
 		'resolution matches',
