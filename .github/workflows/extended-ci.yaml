@@ -43,7 +43,7 @@ jobs:
         run: pnpm run build
 
       - name: Run extended tests
-        run: pnpm run test
+        run: pnpm run test -- --save-fixture
         env:
           TEST_DISABLE_VFS: "1"
           TEST_ENABLE_TSC: "1"
