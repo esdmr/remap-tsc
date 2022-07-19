@@ -25,15 +25,6 @@ export interface RemapOptions {
 	 * Custom TypeScript host for non-Node.JS environments.
 	 */
 	host?: RemapHost;
-	/**
-	 * Since the entire point of {@link TscRemap} is to map source/output files,
-	 * it would be useless if there are no output. Nevertheless, by disabling
-	 * this flag, loading a tsconfig with `noEmit` would return silently without
-	 * adding any source/output file.
-	 *
-	 * @default true
-	 */
-	throwIfEmitIsDisabled?: boolean;
 }
 
 export class RemapError extends Error {
@@ -94,7 +85,6 @@ export class TscRemap {
 	constructor (options: RemapOptions = {}) {
 		this._options = {
 			host: defaultRemapHost,
-			throwIfEmitIsDisabled: true,
 			...options,
 		};
 	}
@@ -196,18 +186,10 @@ export class TscRemap {
 			declaration,
 			emitDeclarationOnly,
 			inlineSourceMap,
-			noEmit,
 			out,
 			outFile,
 			sourceMap,
 		} = commandLine.options;
-
-		if (noEmit && this._options.throwIfEmitIsDisabled) {
-			throw new RemapError(
-				'Cannot map files when emit is disabled.',
-				'noEmit is set. (You can disable this error via throwIfEmitIsDisabled.)',
-			);
-		}
 
 		if (outFile || out) {
 			throw new RemapError(
