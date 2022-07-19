@@ -97,6 +97,11 @@ export class TscRemap {
 		return this._outputFiles.get(path.resolve(filePath));
 	}
 
+	clear () {
+		this._sourceFiles.clear();
+		this._outputFiles.clear();
+	}
+
 	loadConfig (projectPath: string) {
 		const configPath = this._findConfig(projectPath);
 		const configFile = ts.readConfigFile(
