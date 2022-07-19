@@ -160,10 +160,6 @@ export class TscRemap {
 
 		this._validateCommandLine(commandLine);
 
-		if (commandLine.options.noEmit) {
-			return;
-		}
-
 		const { composite, rootDir } = commandLine.options;
 		let effectiveRoot: string | undefined;
 
@@ -175,6 +171,10 @@ export class TscRemap {
 
 		for (const fileName of commandLine.fileNames) {
 			this._validateFile(fileName, effectiveRoot);
+
+			if (commandLine.options.noEmit) {
+				continue;
+			}
 
 			this._addMapping(
 				fileName,
