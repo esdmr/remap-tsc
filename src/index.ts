@@ -22,23 +22,9 @@ export interface RemapHost {
 
 export interface RemapOptions {
 	/**
-	 * The paths in {@link sourceFiles} and {@link outputFiles} would be
-	 * relative to the current working directory.
-	 *
-	 * @default false
-	 */
-	useRelativePaths?: boolean;
-	/**
 	 * Custom TypeScript host for non-Node.JS environments.
 	 */
 	host?: RemapHost;
-	/**
-	 * Working directory to resolve relative paths. It will be resolved to an
-	 * absolute path first.
-	 *
-	 * @default process.cwd()
-	 */
-	workingDirectory?: string;
 	/**
 	 * Since the entire point of {@link TscRemap} is to map source/output files,
 	 * it would be useless if there are no output. Nevertheless, by disabling
@@ -107,20 +93,18 @@ export class TscRemap {
 
 	constructor (options: RemapOptions = {}) {
 		this._options = {
-			useRelativePaths: false,
 			host: defaultRemapHost,
 			throwIfEmitIsDisabled: true,
 			...options,
-			workingDirectory: path.resolve(options.workingDirectory ?? ''),
 		};
 	}
 
 	getSourceFile (filePath: string) {
-		return this._sourceFiles.get(this._formatPath(filePath));
+		return this._sourceFiles.get(path.resolve(filePath));
 	}
 
 	getOutputFile (filePath: string) {
-		return this._outputFiles.get(this._formatPath(filePath));
+		return this._outputFiles.get(path.resolve(filePath));
 	}
 
 	loadConfig (projectPath: string) {
@@ -187,16 +171,8 @@ export class TscRemap {
 		}
 	}
 
-	private _formatPath (file: string) {
-		if (this._options.useRelativePaths) {
-			return path.relative(this._options.workingDirectory, file) || '.';
-		}
-
-		return path.normalize(file);
-	}
-
 	private _findConfig (projectPath: string) {
-		projectPath = path.resolve(this._options.workingDirectory, projectPath);
+		projectPath = path.resolve(projectPath);
 
 		if (this._options.host.parseConfig.fileExists(projectPath)) {
 			return projectPath;
@@ -210,7 +186,7 @@ export class TscRemap {
 
 		throw new RemapError(
 			'Could not find a tsconfig file.',
-			`Searched in "${this._formatPath(projectPath)}".`,
+			`Searched in "${projectPath}".`,
 		);
 	}
 
@@ -259,14 +235,14 @@ export class TscRemap {
 		if (!this._options.host.parseConfig.fileExists(fileName)) {
 			throw new RemapError(
 				'TS6053: File not found.',
-				`The file would have been at "${this._formatPath(fileName)}". All specified files must exist.`,
+				`The file would have been at "${fileName}". All specified files must exist.`,
 			);
 		}
 
 		if (effectiveRoot !== undefined && !isPathUnderRoot(effectiveRoot, fileName)) {
 			throw new RemapError(
 				'TS6059: File is not under rootDir.',
-				`The file is at "${this._formatPath(fileName)}" and the rootDir is at "${this._formatPath(effectiveRoot)}". rootDir is expected to contain all source files.`,
+				`The file is at "${fileName}" and the rootDir is at "${effectiveRoot}". rootDir is expected to contain all source files.`,
 			);
 		}
 	}
@@ -275,9 +251,6 @@ export class TscRemap {
 		if (outputs.length === 0) {
 			return;
 		}
-
-		input = this._formatPath(input);
-		outputs = outputs.map((file) => this._formatPath(file));
 
 		if (outputs.includes(input)) {
 			throw new RemapError(

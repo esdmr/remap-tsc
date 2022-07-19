@@ -46,10 +46,7 @@ export async function runTestCase (file: string | URL, testCase: TestCase, remap
 			}));
 
 			await t.test('via absolute path', async (t) => {
-				const data = new TscRemap({
-					useRelativePaths: true,
-					...remapOptions,
-				});
+				const data = new TscRemap(remapOptions);
 				const root = path.resolve(dir, 'testdir');
 				const searchPath = path.join(root, testCase.path);
 
@@ -72,10 +69,7 @@ export async function runTestCase (file: string | URL, testCase: TestCase, remap
 
 			await t.test('via relative indirect path', async (t) => {
 				process.chdir(dir);
-				const data = new TscRemap({
-					useRelativePaths: true,
-					...remapOptions,
-				});
+				const data = new TscRemap(remapOptions);
 				const searchPath = path.join('testdir', testCase.path);
 
 				if (pass) {
@@ -112,10 +106,7 @@ export async function runTestCase (file: string | URL, testCase: TestCase, remap
 				}
 
 				process.chdir(projectDir);
-				const data = new TscRemap({
-					useRelativePaths: true,
-					...remapOptions,
-				});
+				const data = new TscRemap(remapOptions);
 
 				if (pass) {
 					data.loadConfig(projectPath);

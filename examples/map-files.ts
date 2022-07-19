@@ -1,10 +1,8 @@
 import assert from 'node:assert';
+import path from 'node:path';
 import { TscRemap } from '@esdmr/remap-tsc';
 
-const data = new TscRemap({
-	// For this example:
-	useRelativePaths: true,
-});
+const data = new TscRemap();
 
 // Assume the directory structure:
 //
@@ -20,11 +18,11 @@ data.loadConfig('tsconfig.json');
 // Map source to output.
 assert.strictEqual(
 	data.getSourceFile('src/index.ts')?.javaScriptFile,
-	'build/index.js',
+	path.resolve('build/index.js'),
 );
 
 // Map output to source.
 assert.strictEqual(
 	data.getOutputFile('build/index.js')?.sourceFile,
-	'src/index.ts',
+	path.resolve('src/index.ts'),
 );

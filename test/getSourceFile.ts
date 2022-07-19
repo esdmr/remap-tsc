@@ -21,15 +21,13 @@ await test('getSourceFile', async (t) => {
 
 	process.chdir(dir);
 
-	const data = new TscRemap({
-		useRelativePaths: true,
-	});
+	const data = new TscRemap();
 
 	data.loadConfig('.');
 
 	t.strictSame(
-		data.getSourceFile(path.normalize('src/a.ts')),
-		new SourceFile([path.normalize('build/a.js')]),
+		data.getSourceFile('src/a.ts'),
+		new SourceFile([path.resolve('build/a.js')]),
 		'should be the correct source file',
 	);
 });

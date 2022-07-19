@@ -32,9 +32,7 @@ await test('getOutputFile', async (t) => {
 
 	process.chdir(dir);
 
-	const data = new TscRemap({
-		useRelativePaths: true,
-	});
+	const data = new TscRemap();
 
 	data.loadConfig('a');
 	data.loadConfig('b');
@@ -46,11 +44,11 @@ await test('getOutputFile', async (t) => {
 		},
 		{
 			sourceFiles: new Map([
-				[path.normalize('a/a.ts'), new SourceFile([path.normalize('a.js')])],
-				[path.normalize('b/a.ts'), new SourceFile([path.normalize('a.js')])],
+				[path.resolve('a/a.ts'), new SourceFile([path.resolve('a.js')])],
+				[path.resolve('b/a.ts'), new SourceFile([path.resolve('a.js')])],
 			]),
 			outputFiles: new Map([
-				[path.normalize('a.js'), new OutputFile(path.normalize('b/a.ts'))],
+				[path.resolve('a.js'), new OutputFile(path.resolve('b/a.ts'))],
 			]),
 		},
 		'resolution matches',

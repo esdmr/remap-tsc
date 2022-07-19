@@ -21,15 +21,13 @@ await test('getOutputFile', async (t) => {
 
 	process.chdir(dir);
 
-	const data = new TscRemap({
-		useRelativePaths: true,
-	});
+	const data = new TscRemap();
 
 	data.loadConfig('.');
 
 	t.strictSame(
-		data.getOutputFile(path.normalize('build/a.js')),
-		new OutputFile(path.normalize('src/a.ts')),
+		data.getOutputFile('build/a.js'),
+		new OutputFile(path.resolve('src/a.ts')),
 		'should be the correct output file',
 	);
 });
