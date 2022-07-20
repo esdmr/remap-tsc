@@ -11,6 +11,6 @@ await runTestCase(import.meta.url, {
 		caseSensitive: false,
 	},
 	files: {
-		'A.ts': ['A.js'],
+		'a.ts': ['a.js'],
 	},
 });
