@@ -9,6 +9,5 @@ await runTestCase(import.meta.url, {
 			},
 		}),
 	},
-	path: '.',
 	files: {},
 });

@@ -12,7 +12,6 @@ await runTestCase(import.meta.url, {
 			},
 		}),
 	},
-	path: '.',
 	if: {
 		typescript: '>=4.7.0',
 	},

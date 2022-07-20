@@ -4,5 +4,4 @@ await runTestCase(import.meta.url, {
 	spec: {
 		'a.ts': '',
 	},
-	path: '.',
 });

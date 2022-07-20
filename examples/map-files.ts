@@ -1,8 +1,8 @@
 import assert from 'node:assert';
 import path from 'node:path';
-import { TscRemap } from '@esdmr/remap-tsc';
+import { RemapTsc } from '@esdmr/remap-tsc';
 
-const data = new TscRemap();
+const data = new RemapTsc();
 
 // Assume the directory structure:
 //

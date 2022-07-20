@@ -18,7 +18,6 @@ await runTestCase(import.meta.url, {
 			include: ['*', '?/?/c.ts', '**/e.ts', 'f.ts'],
 		}),
 	},
-	path: '.',
 	files: {
 		'a.ts': ['a.js'],
 		'a/b/c.ts': ['a/b/c.js'],

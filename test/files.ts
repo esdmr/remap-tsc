@@ -7,7 +7,6 @@ await runTestCase(import.meta.url, {
 			files: ['a.ts'],
 		}),
 	},
-	path: '.',
 	files: {
 		'a.ts': ['a.js'],
 	},

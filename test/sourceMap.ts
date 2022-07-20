@@ -9,7 +9,6 @@ await runTestCase(import.meta.url, {
 			},
 		}),
 	},
-	path: '.',
 	files: {
 		'a.ts': ['a.js', 'a.js.map'],
 	},

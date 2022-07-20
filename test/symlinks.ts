@@ -7,7 +7,6 @@ await runTestCase(import.meta.url, {
 		'b.ts': fixture('symlink', 'a.ts'),
 		'tsconfig.json': tsconfig({}),
 	},
-	path: '.',
 	files: {
 		'a.ts': ['a.js'],
 		'b.ts': ['b.js'],

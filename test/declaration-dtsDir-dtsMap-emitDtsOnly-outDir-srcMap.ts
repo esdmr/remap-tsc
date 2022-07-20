@@ -14,7 +14,6 @@ await runTestCase(import.meta.url, {
 			},
 		}),
 	},
-	path: '.',
 	files: {
 		'b.ts': ['types/b.d.ts', 'types/b.d.ts.map'],
 	},

@@ -18,5 +18,5 @@ await runTestCase(import.meta.url, {
 			}),
 		},
 	},
-	path: 'src',
+	paths: ['src'],
 });

@@ -1,13 +1,8 @@
-import path from 'node:path';
-import process from 'node:process';
-import { test } from 'tap';
-import { mock, OutputFile, TscRemap } from './utils/source.js';
-import { tsconfig } from './utils/harness.js';
+import { runTestCase, tsconfig } from './utils/harness.js';
+import { OutputFile } from './utils/source.js';
 
-await test('getOutputFile', async (t) => {
-	mock(t);
-
-	const dir = path.resolve(t.testdir({
+await runTestCase(import.meta.url, {
+	spec: {
 		src: {
 			'a.ts': '',
 		},
@@ -17,17 +12,19 @@ await test('getOutputFile', async (t) => {
 				outDir: 'build',
 			},
 		}),
-	}));
+	},
+	checkResolution (t, options) {
+		const outputFile = options.data.getOutputFile(options.getPath('build/a.js'));
 
-	process.chdir(dir);
+		if (outputFile === undefined) {
+			throw new Error('Output file should exist');
+		}
 
-	const data = new TscRemap();
-
-	data.loadConfig('.');
-
-	t.strictSame(
-		data.getOutputFile('build/a.js'),
-		new OutputFile(path.resolve('src/a.ts')),
-		'should be the correct output file',
-	);
+		t.strictSame(
+			new OutputFile(options.fixUpActual(outputFile.sourceFile)),
+			new OutputFile(options.fixUpExpected('src/a.ts')),
+			'should be the correct output file',
+		);
+	},
+	files: {},
 });

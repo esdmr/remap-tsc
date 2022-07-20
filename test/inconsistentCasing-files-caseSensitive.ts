@@ -9,7 +9,6 @@ await runTestCase(import.meta.url, {
 			files: ['A.ts'],
 		}),
 	},
-	path: '.',
 	if: {
 		caseSensitive: true,
 	},

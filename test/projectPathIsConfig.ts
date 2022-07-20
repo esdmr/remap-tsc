@@ -5,7 +5,7 @@ await runTestCase(import.meta.url, {
 		'a.ts': '',
 		'tsconfig.json': tsconfig({}),
 	},
-	path: 'tsconfig.json',
+	paths: ['tsconfig.json'],
 	files: {
 		'a.ts': ['a.js'],
 	},

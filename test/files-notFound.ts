@@ -9,5 +9,4 @@ await runTestCase(import.meta.url, {
 			files: ['a.ts', 'b.ts'],
 		}),
 	},
-	path: '.',
 });

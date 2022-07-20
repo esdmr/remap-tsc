@@ -2,7 +2,6 @@
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
-import { nodeExternalsPlugin } from 'esbuild-node-externals';
 import { execa } from 'execa';
 
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
@@ -10,13 +9,11 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 Usage: node scripts/build-server.js [options]
 
 Options:
---tsc    Run tsc in the background
 --watch  Watch for changes
 --dev    Disable identifier minification`);
 }
 
 const shouldWatch = process.argv.includes('--watch');
-const shouldRunTsc = process.argv.includes('--tsc');
 const isDev = shouldWatch || process.argv.includes('--dev');
 
 if (isDev) {
@@ -28,13 +25,14 @@ const buildOptions = {
 	absWorkingDir: resolvePath('..'),
 	platform: 'node',
 	watch: shouldWatch,
+	bundle: true,
 	minify: !isDev,
 	keepNames: !isDev,
 	minifySyntax: isDev,
 	minifyWhitespace: isDev,
 	sourcemap: true,
 	sourcesContent: false,
-	plugins: [nodeExternalsPlugin()],
+	external: ['node:path', 'typescript'],
 	target: 'node14',
 };
 
@@ -52,25 +50,15 @@ const cjsResult = await build({
 	format: 'cjs',
 });
 
-/** @type {import('execa').ExecaChildProcess | undefined} */
-let tscResult;
+const options = ['exec', 'tsc', '-b'];
 
-if (shouldRunTsc) {
-	const options = ['exec', 'tsc', '-b', '--preserveWatchOutput'];
-
-	if (shouldWatch) {
-		options.push('-w');
-	}
-
-	tscResult = execa('pnpm', options, {
-		cwd: resolvePath('..'),
-		stdio: 'inherit',
-	});
-
-	if (!shouldWatch) {
-		await tscResult;
-	}
+if (shouldWatch) {
+	options.push('-w', '--preserveWatchOutput');
 }
+
+const tscResult = execa('pnpm', options, {
+	stdio: 'inherit',
+});
 
 if (shouldWatch) {
 	console.log('Watching for changes…');
@@ -82,6 +70,8 @@ if (shouldWatch) {
 		tscResult?.kill();
 		process.exit(0);
 	});
+} else {
+	await tscResult;
 }
 
 /** @param {string} path */

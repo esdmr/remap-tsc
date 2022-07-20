@@ -8,5 +8,5 @@ await runTestCase(import.meta.url, {
 		'tsconfig.json': tsconfig({}),
 	},
 	// `tsc` does not look in upper directories.
-	path: 'src',
+	paths: ['src'],
 });

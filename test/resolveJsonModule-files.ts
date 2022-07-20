@@ -11,6 +11,5 @@ await runTestCase(import.meta.url, {
 			files: ['a.json'],
 		}),
 	},
-	path: '.',
 	files: {},
 });

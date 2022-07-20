@@ -15,7 +15,6 @@ await runTestCase(import.meta.url, {
 			},
 		}),
 	},
-	path: '.',
 	files: {
 		'src/a.js': ['build/a.d.ts'],
 	},

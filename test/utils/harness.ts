@@ -5,37 +5,60 @@ import semver from 'semver';
 import { test } from 'tap';
 import { Tsconfig } from 'tsconfig-type';
 import readdirp from 'readdirp';
-import { OutputFile, TscRemap, SourceFile, ts, mock, isMockingEnabled, RemapOptions } from './source.js';
+import { OutputFile, RemapTsc, SourceFile, ts, mock, isMockingEnabled } from './source.js';
 
+const { useCaseSensitiveFileNames } = ts.sys;
 const isTscEnabled = !isMockingEnabled && Boolean(process.env.TEST_ENABLE_TSC);
+
+export interface CheckResolutionOptions {
+	readonly data: RemapTsc;
+	readonly testCase: TestCase;
+	readonly getPath: (file: string) => string;
+	readonly fixUpActual: (file: string) => string;
+	readonly fixUpExpected: (file: string) => string;
+}
 
 export interface TestCase {
 	readonly spec: Tap.Fixture.Spec;
-	readonly path: string;
-	readonly if?: {
+	readonly paths: readonly [string, ...string[]];
+	readonly getRemapTsc: () => RemapTsc;
+	readonly loadConfig: (data: RemapTsc, ...paths: [string, ...string[]]) => void;
+	readonly checkResolution: (t: Tap.Test, options: CheckResolutionOptions) => void;
+	readonly if: {
 		readonly caseSensitive?: boolean;
 		readonly node?: string;
 		readonly typescript?: string;
 		readonly vfs?: boolean;
-		readonly tsc?: boolean;
 	};
-	readonly files?: Files;
+	readonly tscCompatible: boolean;
+	readonly files: Record<string, readonly string[]> | undefined;
 }
-
-export type Files = Record<string, readonly string[]>;
 
 export function tsconfig (config: Tsconfig) {
 	return JSON.stringify(config);
 }
 
-export async function runTestCase (file: string | URL, testCase: TestCase, remapOptions: RemapOptions = {}) {
-	const pass = testCase.files !== undefined;
+export async function runTestCase (file: string | URL, partialTestCase: Partial<TestCase>) {
+	const testCase: TestCase = {
+		spec: {},
+		paths: ['.'],
+		getRemapTsc: () => new RemapTsc(),
+		loadConfig (data, ...paths) {
+			for (const path of paths) {
+				data.loadConfig(path);
+			}
+		},
+		checkResolution,
+		if: {},
+		tscCompatible: true,
+		files: undefined,
+		...partialTestCase,
+	};
+
 	const skip = shouldSkip(testCase.if);
-	const url = new URL(file);
 
 	await test(
-		path.basename(url.pathname).replace(/\.js$/i, '').trim()
-			+ (url.hash ? '#' + decodeURIComponent(url.hash.slice(1)) : ''),
+		getTestCaseName(file),
 		{
 			skip,
 		},
@@ -44,102 +67,70 @@ export async function runTestCase (file: string | URL, testCase: TestCase, remap
 			const dir = path.resolve(t.testdir({
 				testdir: testCase.spec,
 			}));
+			process.chdir(dir);
 
 			await t.test('via absolute path', async (t) => {
-				const data = new TscRemap(remapOptions);
 				const root = path.resolve(dir, 'testdir');
-				const searchPath = path.join(root, testCase.path);
-
-				if (pass) {
-					data.loadConfig(searchPath);
-
-					checkResolution(
-						t,
-						data,
-						testCase.files,
-						(file) => path.relative(root, file),
-						(file) => path.normalize(file),
-					);
-				} else {
-					t.throws(() => {
-						data.loadConfig(searchPath);
-					}, 'project should error');
-				}
+				runTestScenario(t, testCase, root);
 			});
 
-			await t.test('via relative indirect path', async (t) => {
-				process.chdir(dir);
-				const data = new TscRemap(remapOptions);
-				const searchPath = path.join('testdir', testCase.path);
-
-				if (pass) {
-					data.loadConfig(searchPath);
-
-					checkResolution(
-						t,
-						data,
-						testCase.files,
-						(file) => path.relative('testdir', file),
-						(file) => path.normalize(file),
-					);
-				} else {
-					t.throws(() => {
-						data.loadConfig(searchPath);
-					}, 'project should error');
-				}
+			await t.test('via relative path', async (t) => {
+				const root = 'testdir';
+				runTestScenario(t, testCase, root);
 			});
 
-			await t.test('via relative direct path', async (t) => {
-				process.chdir(path.join(dir, 'testdir'));
+			if (!isTscEnabled) {
+				return;
+			}
 
-				let projectDir: string;
-				let projectPath: string;
-
-				if (ts.sys.fileExists(testCase.path)) {
-					projectDir = path.dirname(testCase.path);
-					projectPath = path.basename(testCase.path);
-				} else if (ts.sys.directoryExists(testCase.path)) {
-					projectDir = testCase.path;
-					projectPath = '.';
-				} else {
-					throw new Error('Test case path is neither a file nor a directory');
-				}
-
-				process.chdir(projectDir);
-				const data = new TscRemap(remapOptions);
-
-				if (pass) {
-					data.loadConfig(projectPath);
-
-					checkResolution(
-						t,
-						data,
-						testCase.files,
-						(file) => path.relative('', file),
-						(file) => path.relative(projectDir, file),
-					);
-				} else {
-					t.throws(() => {
-						data.loadConfig(projectPath);
-					}, 'project should error');
-				}
-			});
-
-			if (isTscEnabled) {
-				await t.test('via tsc', async (t) => {
-					if (pass) {
+			await t.test(
+				'via tsc',
+				{
+					skip: testCase.tscCompatible ? false : 'Incompatible with tsc',
+				},
+				async (t) => {
+					if (testCase.files === undefined) {
+						await t.rejects(runTsc(testCase, dir), 'tsc should error');
+					} else {
 						t.strictSame(
 							await getTscBuildPaths(testCase, dir),
 							getTestCaseBuildPaths(testCase),
 							'build paths match',
 						);
-					} else {
-						await t.rejects(runTsc(testCase, dir), 'tsc should error');
 					}
-				});
-			}
+				},
+			);
 		},
 	);
+}
+
+function getTestCaseName (file: string | URL) {
+	const url = new URL(file);
+	const fileName = path.basename(url.pathname).replace(/\.js$/i, '').trim();
+	const testName = url.hash ? '#' + decodeURIComponent(url.hash.slice(1)) : '';
+
+	return fileName + testName;
+}
+
+function runTestScenario (t: Tap.Test, testCase: TestCase, root: string) {
+	const data = testCase.getRemapTsc();
+	const searchPaths = testCase.paths.map((searchPath) => path.join(root, searchPath)) as [string, ...string[]];
+
+	if (testCase.files === undefined) {
+		t.throws(() => {
+			testCase.loadConfig(data, ...searchPaths);
+		}, 'project should error');
+	} else {
+		testCase.loadConfig(data, ...searchPaths);
+
+		testCase.checkResolution(t, {
+			data,
+			testCase,
+			getPath: (file) => path.join(root, file),
+			fixUpActual: (file) => normalizePathForComparison(path.relative(root, file)),
+			fixUpExpected: (file) => normalizePathForComparison(file),
+		});
+	}
 }
 
 function getTestCaseBuildPaths (testCase: TestCase) {
@@ -174,58 +165,55 @@ async function getTscBuildPaths (testCase: TestCase, dir: string) {
 }
 
 async function runTsc (testCase: TestCase, dir: string) {
-	return execa('pnpm', ['exec', 'tsc', '-p', path.resolve(dir, 'testdir', testCase.path)], {
-		stdio: 'inherit',
-	});
+	const abortController = new AbortController();
+
+	try {
+		await Promise.all(testCase.paths.map(async (searchPath) => execa(
+			'pnpm',
+			['exec', 'tsc', '-p', path.resolve(dir, 'testdir', searchPath)],
+			{
+				stdio: 'inherit',
+				signal: abortController.signal,
+			},
+		)));
+	} finally {
+		abortController.abort();
+	}
 }
 
-function checkResolution (
-	t: Tap.Test,
-	data: TscRemap,
-	files: Files,
-	fixUpActual: (file: string) => string,
-	fixUpExpected: (file: string) => string,
-) {
-	if (!ts.sys.useCaseSensitiveFileNames) {
-		const originalFixUpActual = fixUpActual;
-		fixUpActual = (file) => originalFixUpActual(file).toLowerCase();
-
-		const originalFixUpExpected = fixUpExpected;
-		fixUpExpected = (file) => originalFixUpExpected(file).toLowerCase();
-	}
-
+function checkResolution (t: Tap.Test, options: CheckResolutionOptions) {
 	const actualSourceFiles = new Map<string, SourceFile>();
 	const actualOutputFiles = new Map<string, OutputFile>();
 
-	for (const [key, value] of data.sourceFiles) {
+	for (const [key, value] of options.data.sourceFiles) {
 		actualSourceFiles.set(
-			fixUpActual(key),
+			options.fixUpActual(key),
 			new SourceFile(
-				[...value.outputFiles].map((file) => fixUpActual(file)),
+				[...value.outputFiles].map((file) => options.fixUpActual(file)),
 			),
 		);
 	}
 
-	for (const [key, value] of data.outputFiles) {
+	for (const [key, value] of options.data.outputFiles) {
 		actualOutputFiles.set(
-			fixUpActual(key),
-			new OutputFile(fixUpActual(value.sourceFile)),
+			options.fixUpActual(key),
+			new OutputFile(options.fixUpActual(value.sourceFile)),
 		);
 	}
 
 	const expectedSourceFiles = new Map<string, SourceFile>();
 	const expectedOutputFiles = new Map<string, OutputFile>();
 
-	for (const [key, value] of Object.entries(files)) {
+	for (const [key, value] of Object.entries(options.testCase.files!)) {
 		const sourceFile = new SourceFile(
-			value.map((file) => fixUpExpected(file)),
+			value.map((file) => options.fixUpExpected(file)),
 		);
-		expectedSourceFiles.set(fixUpExpected(key), sourceFile);
+		expectedSourceFiles.set(options.fixUpExpected(key), sourceFile);
 
 		for (const outputFile of sourceFile.outputFiles) {
 			expectedOutputFiles.set(
 				outputFile,
-				new OutputFile(fixUpExpected(key)),
+				new OutputFile(options.fixUpExpected(key)),
 			);
 		}
 	}
@@ -243,13 +231,18 @@ function checkResolution (
 	);
 }
 
-function shouldSkip (conditions: TestCase['if'] = {}) {
+function normalizePathForComparison (filePath: string) {
+	filePath = path.normalize(filePath);
+
+	return useCaseSensitiveFileNames ? filePath : filePath.toLowerCase();
+}
+
+function shouldSkip (conditions: TestCase['if']) {
 	if (
 		conditions.caseSensitive !== undefined
 		&& conditions.caseSensitive !== ts.sys.useCaseSensitiveFileNames
 	) {
-		return `${
-			conditions.caseSensitive ? 'case-sensitive' : 'case-insensitive'
+		return `${conditions.caseSensitive ? 'case-sensitive' : 'case-insensitive'
 		} file system required`;
 	}
 
@@ -271,17 +264,7 @@ function shouldSkip (conditions: TestCase['if'] = {}) {
 		conditions.vfs !== undefined
 		&& conditions.vfs !== isMockingEnabled
 	) {
-		return `Virtual file system must be ${
-			conditions.vfs ? 'enabled' : 'disabled'
-		}`;
-	}
-
-	if (
-		conditions.tsc !== undefined
-		&& conditions.tsc !== isTscEnabled
-	) {
-		return `tsc must be ${
-			conditions.vfs ? 'enabled' : 'disabled'
+		return `Virtual file system must be ${conditions.vfs ? 'enabled' : 'disabled'
 		}`;
 	}
 
