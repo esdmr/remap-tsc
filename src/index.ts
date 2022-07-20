@@ -115,12 +115,12 @@ export class RemapTsc {
 			}
 
 			this._addMapping(
-				fileName,
+				path.normalize(fileName),
 				ts.getOutputFileNames(
 					commandLine,
 					fileName,
 					!this._preferences.host.parseConfig.useCaseSensitiveFileNames,
-				),
+				).map((file) => path.normalize(file)),
 			);
 		}
 	}
