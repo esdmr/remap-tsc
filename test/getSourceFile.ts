@@ -26,5 +26,6 @@ await runTestCase(import.meta.url, {
 			'should be the correct output file',
 		);
 	},
+	tscCompatible: false,
 	files: {},
 });
