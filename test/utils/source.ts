@@ -3,6 +3,10 @@ import type EventEmitter from 'node:events';
 import mockFs from 'mock-fs';
 
 declare global {
+	// Internally, `Tap.Test` is a `EventEmitter`, but this fact is not
+	// reflected in the type definitions. We need the `EventEmitter` aspect of
+	// it to detect when to stop mocking the file system.
+	//
 	// eslint-disable-next-line @typescript-eslint/no-namespace
 	namespace Tap {
 		interface Test extends EventEmitter {}

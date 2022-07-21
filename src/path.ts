@@ -22,6 +22,8 @@ export class PathMap<T> extends Map<string, T> {
 
 export type ReadonlyPathMap<T> = ReadonlyMap<string, T>;
 
+// This is a constructor, not a variable.
+//
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const ReadonlySet: new<T> (iterable: Iterable<T>) => ReadonlySet<T> = Set;
 

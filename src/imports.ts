@@ -7,5 +7,8 @@
 import path from 'node:path';
 import ts from 'typescript';
 
+// With reexports, the name of imports in the development build are rather
+// nondescriptive. By explicitly import and exporting, we can keep the names.
+//
 // eslint-disable-next-line unicorn/prefer-export-from
 export { path, ts };
