@@ -1,5 +1,6 @@
 import path from 'node:path';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 import { execa } from 'execa';
 import semver from 'semver';
 import { test } from 'tap';
@@ -7,6 +8,7 @@ import { Tsconfig } from 'tsconfig-type';
 import readdirp from 'readdirp';
 import { OutputFile, RemapTsc, SourceFile, ts, mock, isMockingEnabled } from './source.js';
 
+const rootTestDir = fileURLToPath(new URL('..', import.meta.url));
 const { useCaseSensitiveFileNames } = ts.sys;
 const isTscEnabled = !isMockingEnabled && Boolean(process.env.TEST_ENABLE_TSC);
 
@@ -105,11 +107,9 @@ export async function runTestCase (file: string | URL, partialTestCase: Partial<
 }
 
 function getTestCaseName (file: string | URL) {
-	const url = new URL(file);
-	const fileName = path.basename(url.pathname).replace(/\.js$/i, '').trim();
-	const testName = url.hash ? '#' + decodeURIComponent(url.hash.slice(1)) : '';
-
-	return fileName + testName;
+	return path.relative(rootTestDir, fileURLToPath(file))
+		.replace(/\.js$/i, '')
+		.trim();
 }
 
 function runTestScenario (t: Tap.Test, testCase: TestCase, root: string) {
