@@ -1,13 +1,18 @@
+import { RemapTscError } from './errors.js';
 import { path, ts } from './imports.js';
 import { getPreferences, Options, Preferences } from './options.js';
-import { RemapTscError } from './errors.js';
+import { PathMap, ReadonlyPathMap, ReadonlyPathSet } from './path.js';
 import { validateCommandLine, validateFile } from './validators.js';
 
 export class SourceFile {
 	readonly javaScriptFile: string | undefined;
 	readonly declarationFile: string | undefined;
-	readonly sourceMapFiles: ReadonlySet<string>;
-	readonly outputFiles: ReadonlySet<string>;
+	readonly sourceMapFiles: ReadonlyPathSet;
+	readonly outputFiles: ReadonlyPathSet;
+
+	get [Symbol.toStringTag] () {
+		return SourceFile.name;
+	}
 
 	constructor (outputFiles: readonly string[]) {
 		const sourceMapFiles = new Set<string>();
@@ -22,30 +27,80 @@ export class SourceFile {
 			}
 		}
 
-		this.sourceMapFiles = sourceMapFiles;
-		this.outputFiles = new Set(outputFiles);
+		this.sourceMapFiles = new ReadonlyPathSet(sourceMapFiles);
+		this.outputFiles = new ReadonlyPathSet(outputFiles);
+
+		Object.defineProperties(this, {
+			javaScriptFile: {
+				writable: false,
+				configurable: false,
+			},
+			declarationFile: {
+				writable: false,
+				configurable: false,
+			},
+			sourceMapFiles: {
+				writable: false,
+				configurable: false,
+			},
+			outputFiles: {
+				writable: false,
+				configurable: false,
+			},
+		});
 	}
 }
 
 export class OutputFile {
-	constructor (readonly sourceFile: string) {}
+	get [Symbol.toStringTag] () {
+		return OutputFile.name;
+	}
+
+	constructor (readonly sourceFile: string) {
+		Object.defineProperty(this, 'sourceFile', {
+			writable: false,
+			configurable: false,
+		});
+	}
 }
 
 export class RemapTsc {
-	private readonly _sourceFiles = new Map<string, SourceFile>();
-	private readonly _outputFiles = new Map<string, OutputFile>();
+	private readonly _sourceFiles = new PathMap<SourceFile>();
+	private readonly _outputFiles = new PathMap<OutputFile>();
 	private readonly _preferences: Preferences;
 
-	get sourceFiles () {
-		return this._sourceFiles.entries();
+	get sourceFiles (): ReadonlyPathMap<SourceFile> {
+		return this._sourceFiles;
 	}
 
-	get outputFiles () {
-		return this._outputFiles.entries();
+	get outputFiles (): ReadonlyPathMap<OutputFile> {
+		return this._outputFiles;
+	}
+
+	get [Symbol.toStringTag] () {
+		return RemapTsc.name;
 	}
 
 	constructor (options: Options = {}) {
 		this._preferences = getPreferences(options);
+
+		Object.defineProperties(this, {
+			_sourceFiles: {
+				writable: false,
+				enumerable: false,
+				configurable: false,
+			},
+			_outputFiles: {
+				writable: false,
+				enumerable: false,
+				configurable: false,
+			},
+			_preferences: {
+				writable: false,
+				enumerable: false,
+				configurable: false,
+			},
+		});
 	}
 
 	getSourceFile (filePath: string) {
@@ -171,5 +226,17 @@ export class RemapTsc {
 	}
 }
 
-export type { Options as TscRemapOptions, Host as TscRemapHost } from './options.js';
+Object.defineProperties(RemapTsc.prototype, {
+	sourceFiles: {
+		enumerable: true,
+		configurable: false,
+	},
+	outputFiles: {
+		enumerable: true,
+		configurable: false,
+	},
+});
+
 export { RemapTscError } from './errors.js';
+export type { Host as TscRemapHost, Options as TscRemapOptions } from './options.js';
+export type { ReadonlyPathMap, ReadonlyPathSet } from './path.js';
