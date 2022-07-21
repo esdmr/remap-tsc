@@ -6,7 +6,12 @@ import semver from 'semver';
 import { test } from 'tap';
 import { Tsconfig } from 'tsconfig-type';
 import readdirp from 'readdirp';
-import { OutputFile, RemapTsc, SourceFile, ts, mock, isMockingEnabled } from './source.js';
+import { OutputFile,
+	RemapTsc,
+	SourceFile,
+	ts,
+	mock,
+	isMockingEnabled } from './source.js';
 
 const rootTestDir = fileURLToPath(new URL('..', import.meta.url));
 const { useCaseSensitiveFileNames } = ts.sys;
@@ -24,8 +29,14 @@ export interface TestCase {
 	readonly spec: Tap.Fixture.Spec;
 	readonly paths: readonly [string, ...string[]];
 	readonly getRemapTsc: () => RemapTsc;
-	readonly loadConfig: (data: RemapTsc, ...paths: [string, ...string[]]) => void;
-	readonly checkResolution: (t: Tap.Test, options: CheckResolutionOptions) => void;
+	readonly loadConfig: (
+		data: RemapTsc,
+		...paths: [string, ...string[]]
+	) => void;
+	readonly checkResolution: (
+		t: Tap.Test,
+		options: CheckResolutionOptions
+	) => void;
 	readonly if: {
 		readonly caseSensitive?: boolean;
 		readonly node?: string;
@@ -40,7 +51,10 @@ export function tsconfig (config: Tsconfig) {
 	return JSON.stringify(config);
 }
 
-export async function runTestCase (file: string | URL, partialTestCase: Partial<TestCase>) {
+export async function runTestCase (
+	file: string | URL,
+	partialTestCase: Partial<TestCase>,
+) {
 	const testCase: TestCase = {
 		spec: {},
 		paths: ['.'],
@@ -66,9 +80,11 @@ export async function runTestCase (file: string | URL, partialTestCase: Partial<
 		},
 		async (t) => {
 			mock(t);
-			const dir = path.resolve(t.testdir({
-				testdir: testCase.spec,
-			}));
+			const dir = path.resolve(
+				t.testdir({
+					testdir: testCase.spec,
+				}),
+			);
 			process.chdir(dir);
 
 			await t.test('via absolute path', async (t) => {
@@ -88,11 +104,16 @@ export async function runTestCase (file: string | URL, partialTestCase: Partial<
 			await t.test(
 				'via tsc',
 				{
-					skip: testCase.tscCompatible ? false : 'Incompatible with tsc',
+					skip: testCase.tscCompatible
+						? false
+						: 'Incompatible with tsc',
 				},
 				async (t) => {
 					if (testCase.files === undefined) {
-						await t.rejects(runTsc(testCase, dir), 'tsc should error');
+						await t.rejects(
+							runTsc(testCase, dir),
+							'tsc should error',
+						);
 					} else {
 						t.strictSame(
 							await getTscBuildPaths(testCase, dir),
@@ -107,14 +128,17 @@ export async function runTestCase (file: string | URL, partialTestCase: Partial<
 }
 
 function getTestCaseName (file: string | URL) {
-	return path.relative(rootTestDir, fileURLToPath(file))
+	return path
+		.relative(rootTestDir, fileURLToPath(file))
 		.replace(/\.js$/i, '')
 		.trim();
 }
 
 function runTestScenario (t: Tap.Test, testCase: TestCase, root: string) {
 	const data = testCase.getRemapTsc();
-	const searchPaths = testCase.paths.map((searchPath) => path.join(root, searchPath)) as [string, ...string[]];
+	const searchPaths = testCase.paths.map((searchPath) =>
+		path.join(root, searchPath),
+	) as [string, ...string[]];
 
 	if (testCase.files === undefined) {
 		t.throws(() => {
@@ -127,7 +151,8 @@ function runTestScenario (t: Tap.Test, testCase: TestCase, root: string) {
 			data,
 			testCase,
 			getPath: (file) => path.join(root, file),
-			fixUpActual: (file) => normalizePathForComparison(path.relative(root, file)),
+			fixUpActual: (file) =>
+				normalizePathForComparison(path.relative(root, file)),
 			fixUpExpected: (file) => normalizePathForComparison(file),
 		});
 	}
@@ -156,7 +181,10 @@ async function getTscBuildPaths (testCase: TestCase, dir: string) {
 	const buildPaths = new Set<string>();
 
 	for await (const item of readdirp(path.resolve(dir, 'testdir'))) {
-		if (!sourcePaths.has(item.path) && !item.path.endsWith('.tsbuildinfo')) {
+		if (
+			!sourcePaths.has(item.path)
+			&& !item.path.endsWith('.tsbuildinfo')
+		) {
 			buildPaths.add(item.path);
 		}
 	}
@@ -168,14 +196,23 @@ async function runTsc (testCase: TestCase, dir: string) {
 	const abortController = new AbortController();
 
 	try {
-		await Promise.all(testCase.paths.map(async (searchPath) => execa(
-			'pnpm',
-			['exec', 'tsc', '-p', path.resolve(dir, 'testdir', searchPath)],
-			{
-				stdio: 'inherit',
-				signal: abortController.signal,
-			},
-		)));
+		await Promise.all(
+			testCase.paths.map(async (searchPath) =>
+				execa(
+					'pnpm',
+					[
+						'exec',
+						'tsc',
+						'-p',
+						path.resolve(dir, 'testdir', searchPath),
+					],
+					{
+						stdio: 'inherit',
+						signal: abortController.signal,
+					},
+				),
+			),
+		);
 	} finally {
 		abortController.abort();
 	}
@@ -242,7 +279,8 @@ function shouldSkip (conditions: TestCase['if']) {
 		conditions.caseSensitive !== undefined
 		&& conditions.caseSensitive !== ts.sys.useCaseSensitiveFileNames
 	) {
-		return `${conditions.caseSensitive ? 'case-sensitive' : 'case-insensitive'
+		return `${
+			conditions.caseSensitive ? 'case-sensitive' : 'case-insensitive'
 		} file system required`;
 	}
 
@@ -260,11 +298,9 @@ function shouldSkip (conditions: TestCase['if']) {
 		return `TypeScript “${conditions.typescript}” required`;
 	}
 
-	if (
-		conditions.vfs !== undefined
-		&& conditions.vfs !== isMockingEnabled
-	) {
-		return `Virtual file system must be ${conditions.vfs ? 'enabled' : 'disabled'
+	if (conditions.vfs !== undefined && conditions.vfs !== isMockingEnabled) {
+		return `Virtual file system must be ${
+			conditions.vfs ? 'enabled' : 'disabled'
 		}`;
 	}
 

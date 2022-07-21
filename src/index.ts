@@ -159,7 +159,10 @@ export class RemapTsc {
 		// If composite is set, the default [rootDir] is […] the directory
 		// containing the tsconfig.json file.
 		if (composite || rootDir !== undefined) {
-			effectiveRoot = path.resolve(path.dirname(configPath), rootDir ?? '.');
+			effectiveRoot = path.resolve(
+				path.dirname(configPath),
+				rootDir ?? '.',
+			);
 		}
 
 		for (const fileName of commandLine.fileNames) {

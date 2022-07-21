@@ -14,7 +14,9 @@ await runTestCase(import.meta.url, {
 		}),
 	},
 	checkResolution (t, options) {
-		const outputFile = options.data.getOutputFile(options.getPath('build/a.js'));
+		const outputFile = options.data.getOutputFile(
+			options.getPath('build/a.js'),
+		);
 
 		if (outputFile === undefined) {
 			throw new Error('Output file should exist');

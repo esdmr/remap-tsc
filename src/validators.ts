@@ -36,7 +36,11 @@ export function validateCommandLine (commandLine: ts.ParsedCommandLine) {
 	}
 }
 
-export function validateFile (fileName: string, effectiveRoot: string | undefined, preferences: Preferences) {
+export function validateFile (
+	fileName: string,
+	effectiveRoot: string | undefined,
+	preferences: Preferences,
+) {
 	if (!preferences.host.parseConfig.fileExists(fileName)) {
 		throw new RemapTscError(
 			'TS6053: File not found.',
@@ -44,7 +48,10 @@ export function validateFile (fileName: string, effectiveRoot: string | undefine
 		);
 	}
 
-	if (effectiveRoot !== undefined && !isPathUnderRoot(effectiveRoot, fileName)) {
+	if (
+		effectiveRoot !== undefined
+		&& !isPathUnderRoot(effectiveRoot, fileName)
+	) {
 		throw new RemapTscError(
 			'TS6059: File is not under rootDir.',
 			`The file is at "${fileName}" and the rootDir is at "${effectiveRoot}". rootDir is expected to contain all source files.`,
