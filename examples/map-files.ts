@@ -17,12 +17,12 @@ data.loadConfig('tsconfig.json');
 
 // Map source to output.
 assert.strictEqual(
-	data.getSourceFile('src/index.ts')?.javaScriptFile,
+	data.sourceFiles.get('src/index.ts')?.javaScriptFile,
 	path.resolve('build/index.js'),
 );
 
 // Map output to source.
 assert.strictEqual(
-	data.getOutputFile('build/index.js')?.sourceFile,
+	data.outputFiles.get('build/index.js')?.sourceFile,
 	path.resolve('src/index.ts'),
 );

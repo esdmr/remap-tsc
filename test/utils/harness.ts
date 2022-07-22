@@ -3,22 +3,18 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { execa } from 'execa';
 import semver from 'semver';
-import { test } from 'tap';
+import t from 'tap';
 import { Tsconfig } from 'tsconfig-type';
 import readdirp from 'readdirp';
-import { OutputFile,
-	RemapTsc,
-	SourceFile,
-	ts,
-	mock,
-	isMockingEnabled } from './source.js';
+import * as source from './source.js';
+import { rejects, throws } from './errors.js';
 
 const rootTestDir = fileURLToPath(new URL('..', import.meta.url));
-const { useCaseSensitiveFileNames } = ts.sys;
-const isTscEnabled = !isMockingEnabled && Boolean(process.env.TEST_ENABLE_TSC);
+const { useCaseSensitiveFileNames } = source.ts.sys;
+const isTscEnabled = !source.isMockingEnabled && Boolean(process.env.TEST_ENABLE_TSC);
 
 export interface CheckResolutionOptions {
-	readonly data: RemapTsc;
+	readonly data: source.RemapTsc;
 	readonly testCase: TestCase;
 	readonly getPath: (file: string) => string;
 	readonly fixUpActual: (file: string) => string;
@@ -26,17 +22,19 @@ export interface CheckResolutionOptions {
 }
 
 export interface TestCase {
+	readonly t: Tap.Test;
+	readonly name: string;
 	readonly spec: Tap.Fixture.Spec;
 	readonly paths: readonly [string, ...string[]];
-	readonly getRemapTsc: () => RemapTsc;
+	readonly getRemapTsc: () => source.RemapTsc;
 	readonly loadConfig: (
-		data: RemapTsc,
+		data: source.RemapTsc,
 		...paths: [string, ...string[]]
 	) => void;
 	readonly checkResolution: (
 		t: Tap.Test,
-		options: CheckResolutionOptions
-	) => void;
+		options: CheckResolutionOptions,
+	) => void | Promise<void>;
 	readonly if: {
 		readonly caseSensitive?: boolean;
 		readonly node?: string;
@@ -56,9 +54,11 @@ export async function runTestCase (
 	partialTestCase: Partial<TestCase>,
 ) {
 	const testCase: TestCase = {
+		t,
+		name: '',
 		spec: {},
 		paths: ['.'],
-		getRemapTsc: () => new RemapTsc(),
+		getRemapTsc: () => new source.RemapTsc(),
 		loadConfig (data, ...paths) {
 			for (const path of paths) {
 				data.loadConfig(path);
@@ -73,13 +73,13 @@ export async function runTestCase (
 
 	const skip = shouldSkip(testCase.if);
 
-	await test(
-		getTestCaseName(file),
+	await testCase.t.test(
+		getTestCaseName(file, testCase),
 		{
 			skip,
 		},
 		async (t) => {
-			mock(t);
+			source.mock(t);
 			const dir = path.resolve(
 				t.testdir({
 					testdir: testCase.spec,
@@ -89,12 +89,12 @@ export async function runTestCase (
 
 			await t.test('via absolute path', async (t) => {
 				const root = path.resolve(dir, 'testdir');
-				runTestScenario(t, testCase, root);
+				await runTestScenario(t, testCase, root);
 			});
 
 			await t.test('via relative path', async (t) => {
 				const root = 'testdir';
-				runTestScenario(t, testCase, root);
+				await runTestScenario(t, testCase, root);
 			});
 
 			if (!isTscEnabled) {
@@ -110,9 +110,9 @@ export async function runTestCase (
 				},
 				async (t) => {
 					if (testCase.files === undefined) {
-						await t.rejects(
+						await rejects(t,
 							runTsc(testCase, dir),
-							'tsc should error',
+							source.RemapTscError,
 						);
 					} else {
 						t.strictSame(
@@ -127,27 +127,28 @@ export async function runTestCase (
 	);
 }
 
-function getTestCaseName (file: string | URL) {
-	return path
-		.relative(rootTestDir, fileURLToPath(file))
+function getTestCaseName (file: string | URL, { name }: TestCase) {
+	const fileName = path.relative(rootTestDir, fileURLToPath(file))
 		.replace(/\.js$/i, '')
 		.trim();
+
+	return name || fileName;
 }
 
-function runTestScenario (t: Tap.Test, testCase: TestCase, root: string) {
+async function runTestScenario (t: Tap.Test, testCase: TestCase, root: string) {
 	const data = testCase.getRemapTsc();
 	const searchPaths = testCase.paths.map((searchPath) =>
 		path.join(root, searchPath),
 	) as [string, ...string[]];
 
 	if (testCase.files === undefined) {
-		t.throws(() => {
+		throws(t, () => {
 			testCase.loadConfig(data, ...searchPaths);
-		}, 'project should error');
+		}, source.RemapTscError);
 	} else {
 		testCase.loadConfig(data, ...searchPaths);
 
-		testCase.checkResolution(t, {
+		await testCase.checkResolution(t, {
 			data,
 			testCase,
 			getPath: (file) => path.join(root, file),
@@ -219,13 +220,13 @@ async function runTsc (testCase: TestCase, dir: string) {
 }
 
 function checkResolution (t: Tap.Test, options: CheckResolutionOptions) {
-	const actualSourceFiles = new Map<string, SourceFile>();
-	const actualOutputFiles = new Map<string, OutputFile>();
+	const actualSourceFiles = new Map<string, source.SourceFile>();
+	const actualOutputFiles = new Map<string, source.OutputFile>();
 
 	for (const [key, value] of options.data.sourceFiles) {
 		actualSourceFiles.set(
 			options.fixUpActual(key),
-			new SourceFile(
+			new source.SourceFile(
 				[...value.outputFiles].map((file) => options.fixUpActual(file)),
 			),
 		);
@@ -234,15 +235,15 @@ function checkResolution (t: Tap.Test, options: CheckResolutionOptions) {
 	for (const [key, value] of options.data.outputFiles) {
 		actualOutputFiles.set(
 			options.fixUpActual(key),
-			new OutputFile(options.fixUpActual(value.sourceFile)),
+			new source.OutputFile(options.fixUpActual(value.sourceFile)),
 		);
 	}
 
-	const expectedSourceFiles = new Map<string, SourceFile>();
-	const expectedOutputFiles = new Map<string, OutputFile>();
+	const expectedSourceFiles = new Map<string, source.SourceFile>();
+	const expectedOutputFiles = new Map<string, source.OutputFile>();
 
 	for (const [key, value] of Object.entries(options.testCase.files!)) {
-		const sourceFile = new SourceFile(
+		const sourceFile = new source.SourceFile(
 			value.map((file) => options.fixUpExpected(file)),
 		);
 		expectedSourceFiles.set(options.fixUpExpected(key), sourceFile);
@@ -250,7 +251,7 @@ function checkResolution (t: Tap.Test, options: CheckResolutionOptions) {
 		for (const outputFile of sourceFile.outputFiles) {
 			expectedOutputFiles.set(
 				outputFile,
-				new OutputFile(options.fixUpExpected(key)),
+				new source.OutputFile(options.fixUpExpected(key)),
 			);
 		}
 	}
@@ -277,7 +278,7 @@ function normalizePathForComparison (filePath: string) {
 function shouldSkip (conditions: TestCase['if']) {
 	if (
 		conditions.caseSensitive !== undefined
-		&& conditions.caseSensitive !== ts.sys.useCaseSensitiveFileNames
+		&& conditions.caseSensitive !== source.ts.sys.useCaseSensitiveFileNames
 	) {
 		return `${
 			conditions.caseSensitive ? 'case-sensitive' : 'case-insensitive'
@@ -293,12 +294,12 @@ function shouldSkip (conditions: TestCase['if']) {
 
 	if (
 		conditions.typescript !== undefined
-		&& !semver.satisfies(ts.version, conditions.typescript)
+		&& !semver.satisfies(source.ts.version, conditions.typescript)
 	) {
 		return `TypeScript “${conditions.typescript}” required`;
 	}
 
-	if (conditions.vfs !== undefined && conditions.vfs !== isMockingEnabled) {
+	if (conditions.vfs !== undefined && conditions.vfs !== source.isMockingEnabled) {
 		return `Virtual file system must be ${
 			conditions.vfs ? 'enabled' : 'disabled'
 		}`;

@@ -24,19 +24,16 @@ export class PathMap<T> extends Map<string, T> {
 	}
 }
 
-export type ReadonlyPathMap<T> = ReadonlyMap<string, T>;
+export type ReadonlyPathMap<T> = Omit<PathMap<T>, 'set' | 'delete' | 'clear'>;
 
-// This is a constructor, not a variable.
-//
-// eslint-disable-next-line @typescript-eslint/naming-convention
-const ReadonlySet: new <T>(iterable: Iterable<T>) => ReadonlySet<T> = Set;
-
-export class ReadonlyPathSet extends ReadonlySet<string> {
+export class PathSet extends Set<string> {
 	override get [Symbol.toStringTag] () {
-		return ReadonlyPathSet.name;
+		return PathSet.name;
 	}
 
 	override has (key: string): boolean {
 		return super.has(path.resolve(key));
 	}
 }
+
+export type ReadonlyPathSet = Omit<PathSet, 'add' | 'delete' | 'clear'>;

@@ -1,7 +1,7 @@
 import { RemapTscError } from './errors.js';
 import { path, ts } from './imports.js';
 import { getPreferences, Options, Preferences } from './options.js';
-import { PathMap, ReadonlyPathMap, ReadonlyPathSet } from './path.js';
+import { PathMap, PathSet, ReadonlyPathMap, ReadonlyPathSet } from './path.js';
 import { validateCommandLine, validateFile } from './validators.js';
 
 export class SourceFile {
@@ -14,6 +14,7 @@ export class SourceFile {
 		return SourceFile.name;
 	}
 
+	/** @internal */
 	constructor (outputFiles: readonly string[]) {
 		const sourceMapFiles = new Set<string>();
 
@@ -27,8 +28,8 @@ export class SourceFile {
 			}
 		}
 
-		this.sourceMapFiles = new ReadonlyPathSet(sourceMapFiles);
-		this.outputFiles = new ReadonlyPathSet(outputFiles);
+		this.sourceMapFiles = new PathSet(sourceMapFiles);
+		this.outputFiles = new PathSet(outputFiles);
 
 		Object.defineProperties(this, {
 			javaScriptFile: {
@@ -56,6 +57,7 @@ export class OutputFile {
 		return OutputFile.name;
 	}
 
+	/** @internal */
 	constructor (readonly sourceFile: string) {
 		Object.defineProperty(this, 'sourceFile', {
 			writable: false,
@@ -101,14 +103,6 @@ export class RemapTsc {
 				configurable: false,
 			},
 		});
-	}
-
-	getSourceFile (filePath: string) {
-		return this._sourceFiles.get(path.resolve(filePath));
-	}
-
-	getOutputFile (filePath: string) {
-		return this._outputFiles.get(path.resolve(filePath));
 	}
 
 	clear () {
