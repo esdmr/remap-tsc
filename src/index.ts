@@ -1,69 +1,20 @@
-import path from 'node:path';
-import ts from 'typescript';
-
-const defaultRemapHost: RemapHost = {
-	formatDiagnostics: {
-		getCanonicalFileName: (path) => path,
-		getCurrentDirectory: ts.sys.getCurrentDirectory,
-		getNewLine: () => ts.sys.newLine,
-	},
-	parseConfig: {
-		fileExists: ts.sys.fileExists,
-		readDirectory: ts.sys.readDirectory,
-		readFile: ts.sys.readFile,
-		useCaseSensitiveFileNames: ts.sys.useCaseSensitiveFileNames,
-	},
-};
-
-export interface RemapHost {
-	readonly formatDiagnostics: ts.FormatDiagnosticsHost;
-	readonly parseConfig: ts.ParseConfigHost;
-}
-
-export interface RemapOptions {
-	/**
-	 * The paths in {@link sourceFiles} and {@link outputFiles} would be
-	 * relative to the current working directory.
-	 *
-	 * @default false
-	 */
-	useRelativePaths?: boolean;
-	/**
-	 * Custom TypeScript host for non-Node.JS environments.
-	 */
-	host?: RemapHost;
-	/**
-	 * Working directory to resolve relative paths. It will be resolved to an
-	 * absolute path first.
-	 *
-	 * @default process.cwd()
-	 */
-	workingDirectory?: string;
-	/**
-	 * Since the entire point of {@link TscRemap} is to map source/output files,
-	 * it would be useless if there are no output. Nevertheless, by disabling
-	 * this flag, loading a tsconfig with `noEmit` would return silently without
-	 * adding any source/output file.
-	 *
-	 * @default true
-	 */
-	throwIfEmitIsDisabled?: boolean;
-}
-
-export class RemapError extends Error {
-	override name = RemapError.name;
-
-	constructor (...lines: readonly [string, string?]) {
-		super(lines.join('\n'));
-	}
-}
+import { RemapTscError } from './errors.js';
+import { path, ts } from './imports.js';
+import { getPreferences, Options, Preferences } from './options.js';
+import { PathMap, PathSet, ReadonlyPathMap, ReadonlyPathSet } from './path.js';
+import { validateCommandLine, validateFile } from './validators.js';
 
 export class SourceFile {
 	readonly javaScriptFile: string | undefined;
 	readonly declarationFile: string | undefined;
-	readonly sourceMapFiles: ReadonlySet<string>;
-	readonly outputFiles: ReadonlySet<string>;
+	readonly sourceMapFiles: ReadonlyPathSet;
+	readonly outputFiles: ReadonlyPathSet;
 
+	get [Symbol.toStringTag] () {
+		return SourceFile.name;
+	}
+
+	/** @internal */
 	constructor (outputFiles: readonly string[]) {
 		const sourceMapFiles = new Set<string>();
 
@@ -77,88 +28,124 @@ export class SourceFile {
 			}
 		}
 
-		this.sourceMapFiles = sourceMapFiles;
-		this.outputFiles = new Set(outputFiles);
+		this.sourceMapFiles = new PathSet(sourceMapFiles);
+		this.outputFiles = new PathSet(outputFiles);
+
+		Object.defineProperties(this, {
+			javaScriptFile: {
+				writable: false,
+				configurable: false,
+			},
+			declarationFile: {
+				writable: false,
+				configurable: false,
+			},
+			sourceMapFiles: {
+				writable: false,
+				configurable: false,
+			},
+			outputFiles: {
+				writable: false,
+				configurable: false,
+			},
+		});
 	}
 }
 
 export class OutputFile {
-	constructor (readonly sourceFile: string) {}
+	get [Symbol.toStringTag] () {
+		return OutputFile.name;
+	}
+
+	/** @internal */
+	constructor (readonly sourceFile: string) {
+		Object.defineProperty(this, 'sourceFile', {
+			writable: false,
+			configurable: false,
+		});
+	}
 }
 
-function isPathUnderRoot (root: string, file: string) {
-	const relative = path.relative(root, file);
+export class RemapTsc {
+	private readonly _sourceFiles = new PathMap<SourceFile>();
+	private readonly _outputFiles = new PathMap<OutputFile>();
+	private readonly _preferences: Preferences;
 
-	return relative && relative.split(path.sep, 1)[0] !== '..' && !path.isAbsolute(relative);
-}
-
-export class TscRemap {
-	private readonly _sourceFiles = new Map<string, SourceFile>();
-	private readonly _outputFiles = new Map<string, OutputFile>();
-	private readonly _options: Required<RemapOptions>;
-
-	get sourceFiles () {
-		return this._sourceFiles.entries();
+	get sourceFiles (): ReadonlyPathMap<SourceFile> {
+		return this._sourceFiles;
 	}
 
-	get outputFiles () {
-		return this._outputFiles.entries();
+	get outputFiles (): ReadonlyPathMap<OutputFile> {
+		return this._outputFiles;
 	}
 
-	constructor (options: RemapOptions = {}) {
-		this._options = {
-			useRelativePaths: false,
-			host: defaultRemapHost,
-			throwIfEmitIsDisabled: true,
-			...options,
-			workingDirectory: path.resolve(options.workingDirectory ?? ''),
-		};
+	get [Symbol.toStringTag] () {
+		return RemapTsc.name;
 	}
 
-	getSourceFile (filePath: string) {
-		return this._sourceFiles.get(this._formatPath(filePath));
+	constructor (options: Options = {}) {
+		this._preferences = getPreferences(options);
+
+		Object.defineProperties(this, {
+			_sourceFiles: {
+				writable: false,
+				enumerable: false,
+				configurable: false,
+			},
+			_outputFiles: {
+				writable: false,
+				enumerable: false,
+				configurable: false,
+			},
+			_preferences: {
+				writable: false,
+				enumerable: false,
+				configurable: false,
+			},
+		});
 	}
 
-	getOutputFile (filePath: string) {
-		return this._outputFiles.get(this._formatPath(filePath));
+	clear () {
+		this._sourceFiles.clear();
+		this._outputFiles.clear();
 	}
 
 	loadConfig (projectPath: string) {
 		const configPath = this._findConfig(projectPath);
 		const configFile = ts.readConfigFile(
 			configPath,
-			this._options.host.parseConfig.readFile,
+			this._preferences.host.parseConfig.readFile,
 		);
 
 		if (configFile.error) {
-			throw new RemapError(
+			throw new RemapTscError(
 				'Reading the tsconfig failed.',
 				ts.formatDiagnostics(
 					[configFile.error],
-					this._options.host.formatDiagnostics,
+					this._preferences.host.formatDiagnostics,
 				),
 			);
 		}
 
 		const commandLine = ts.parseJsonConfigFileContent(
 			configFile.config,
-			this._options.host.parseConfig,
+			this._preferences.host.parseConfig,
 			path.dirname(configPath),
 			undefined,
 			configPath,
 		);
 
 		if (commandLine.errors.length > 0) {
-			throw new RemapError(
+			throw new RemapTscError(
 				'Parsing the tsconfig failed.',
 				ts.formatDiagnostics(
 					commandLine.errors,
-					this._options.host.formatDiagnostics,
+					this._preferences.host.formatDiagnostics,
 				),
 			);
 		}
 
-		this._validateCommandLine(commandLine);
+		validateCommandLine(commandLine);
 
 		const { composite, rootDir } = commandLine.options;
 		let effectiveRoot: string | undefined;
@@ -166,109 +153,47 @@ export class TscRemap {
 		// If composite is set, the default [rootDir] is […] the directory
 		// containing the tsconfig.json file.
 		if (composite || rootDir !== undefined) {
-			effectiveRoot = path.resolve(path.dirname(configPath), rootDir ?? '.');
+			effectiveRoot = path.resolve(
+				path.dirname(configPath),
+				rootDir ?? '.',
+			);
 		}
 
 		for (const fileName of commandLine.fileNames) {
-			this._validateFile(fileName, effectiveRoot);
+			validateFile(fileName, effectiveRoot, this._preferences);
 
 			if (commandLine.options.noEmit) {
 				continue;
 			}
 
 			this._addMapping(
-				fileName,
+				path.normalize(fileName),
 				ts.getOutputFileNames(
 					commandLine,
 					fileName,
-					!this._options.host.parseConfig.useCaseSensitiveFileNames,
-				),
+					!this._preferences.host.parseConfig.useCaseSensitiveFileNames,
+				).map((file) => path.normalize(file)),
 			);
 		}
 	}
 
-	private _formatPath (file: string) {
-		if (this._options.useRelativePaths) {
-			return path.relative(this._options.workingDirectory, file) || '.';
-		}
-
-		return path.normalize(file);
-	}
-
 	private _findConfig (projectPath: string) {
-		projectPath = path.resolve(this._options.workingDirectory, projectPath);
+		projectPath = path.resolve(projectPath);
 
-		if (this._options.host.parseConfig.fileExists(projectPath)) {
+		if (this._preferences.host.parseConfig.fileExists(projectPath)) {
 			return projectPath;
 		}
 
 		const configPath = path.join(projectPath, 'tsconfig.json');
 
-		if (this._options.host.parseConfig.fileExists(configPath)) {
+		if (this._preferences.host.parseConfig.fileExists(configPath)) {
 			return configPath;
 		}
 
-		throw new RemapError(
+		throw new RemapTscError(
 			'Could not find a tsconfig file.',
-			`Searched in "${this._formatPath(projectPath)}".`,
+			`Searched in "${projectPath}".`,
 		);
-	}
-
-	private _validateCommandLine (commandLine: ts.ParsedCommandLine) {
-		const {
-			composite,
-			declaration,
-			emitDeclarationOnly,
-			inlineSourceMap,
-			noEmit,
-			out,
-			outFile,
-			sourceMap,
-		} = commandLine.options;
-
-		if (noEmit && this._options.throwIfEmitIsDisabled) {
-			throw new RemapError(
-				'Cannot map files when emit is disabled.',
-				'noEmit is set. (You can disable this error via throwIfEmitIsDisabled.)',
-			);
-		}
-
-		if (outFile || out) {
-			throw new RemapError(
-				'Cannot map files with an outFile.',
-				'If you intend to use an outFile, use a library that can consume source maps instead.',
-			);
-		}
-
-		if (sourceMap && inlineSourceMap) {
-			throw new RemapError(
-				'TS5053: Option sourceMap cannot be specified with option inlineSourceMap.',
-				'sourceMap and inlineSourceMap are mutually exclusive.',
-			);
-		}
-
-		if (emitDeclarationOnly && !declaration && !composite) {
-			throw new RemapError(
-				'TS5069: Option emitDeclarationOnly cannot be specified without specifying option declaration or option composite.',
-				'emitDeclarationOnly requires declarations to be emitted.',
-			);
-		}
-	}
-
-	private _validateFile (fileName: string, effectiveRoot: string | undefined) {
-		if (!this._options.host.parseConfig.fileExists(fileName)) {
-			throw new RemapError(
-				'TS6053: File not found.',
-				`The file would have been at "${this._formatPath(fileName)}". All specified files must exist.`,
-			);
-		}
-
-		if (effectiveRoot !== undefined && !isPathUnderRoot(effectiveRoot, fileName)) {
-			throw new RemapError(
-				'TS6059: File is not under rootDir.',
-				`The file is at "${this._formatPath(fileName)}" and the rootDir is at "${this._formatPath(effectiveRoot)}". rootDir is expected to contain all source files.`,
-			);
-		}
 	}
 
 	private _addMapping (input: string, outputs: readonly string[]) {
@@ -276,11 +201,8 @@ export class TscRemap {
 			return;
 		}
 
-		input = this._formatPath(input);
-		outputs = outputs.map((file) => this._formatPath(file));
-
 		if (outputs.includes(input)) {
-			throw new RemapError(
+			throw new RemapTscError(
 				'TS5055: Cannot write file because it would overwrite input file.',
 				`The input file is at "${input}".`,
 			);
@@ -300,3 +222,18 @@ export class TscRemap {
 		}
 	}
 }
+
+Object.defineProperties(RemapTsc.prototype, {
+	sourceFiles: {
+		enumerable: true,
+		configurable: false,
+	},
+	outputFiles: {
+		enumerable: true,
+		configurable: false,
+	},
+});
+
+export { RemapTscError } from './errors.js';
+export type { Host as TscRemapHost, Options as TscRemapOptions } from './options.js';
+export type { ReadonlyPathMap, ReadonlyPathSet } from './path.js';

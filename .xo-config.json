@@ -56,7 +56,7 @@
       }
     },
     {
-      "files": "test/*.ts",
+      "files": "test/**/*.ts",
       "rules": {
         "unicorn/filename-case": "off",
         "@typescript-eslint/naming-convention": "off"

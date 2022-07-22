@@ -5,7 +5,8 @@
     "composite": true,
     "outDir": "../build",
     "rootDir": ".",
-    "emitDeclarationOnly": true
+    "emitDeclarationOnly": true,
+    "isolatedModules": true
   },
   "include": ["**/*"]
 }
